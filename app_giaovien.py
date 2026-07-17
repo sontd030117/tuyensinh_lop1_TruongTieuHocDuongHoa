@@ -35,7 +35,7 @@ st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương
 # TỰ ĐỘNG SINH MÃ QR ĐỂ IN ẤN HOẶC GỬI ZALO
 # ==============================================================================
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
-LINK_PHU_HUYNH = "tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
+LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
 
 col_qr1, col_qr2 = st.columns(2)
 
@@ -79,10 +79,11 @@ if password == "123456":
 
     with st.spinner("Đang kết nối đám mây lấy dữ liệu mới nhất..."):
         try:
+            # ĐÃ CẬP NHẬT: Sửa đổi thành tham số 'desc=True' phù hợp với thư viện phiên bản mới
             response = (
                 supabase.table("ho_so_tuyen_sinh")
                 .select("*")
-                .order("created_at", descending=True)
+                .order("created_at", desc=True)
                 .execute()
             )
             rows = response.data
@@ -122,7 +123,7 @@ if password == "123456":
             if len(student_list) > 0:
                 selected_student = st.selectbox("Chọn học sinh cần xem ảnh thẻ BHYT:", student_list)
                 img_url = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                if len(img_url) > 0 and pd.notna(img_url[0]) and str(img_url[0]).startswith("http"):
+                if len(img_url) > 0 and pd.notna(img_url) and str(img_url[0]).startswith("http"):
                     st.image(img_url[0], caption=f"Ảnh thẻ BHYT của học sinh {selected_student}", width=400)
                 else:
                     st.warning("Học sinh này chưa có ảnh thẻ BHYT hoặc đường dẫn ảnh không hợp lệ.")
