@@ -8,7 +8,7 @@ from supabase import Client, create_client
 # CẤU HÌNH BIẾN NĂM HỌC VÀ ĐƯỜNG DẪN KẾT NỐI HỆ THỐNG ĐỒNG BỘ
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
-SUPABASE_URL = "https://supabase.co" 
+SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
 
 try:
     # Lấy key bảo mật ngầm khi chạy trực tuyến trên Streamlit Cloud
