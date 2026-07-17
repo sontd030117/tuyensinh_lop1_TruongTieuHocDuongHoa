@@ -35,7 +35,7 @@ st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương
 # TỰ ĐỘNG SINH MÃ QR ĐỂ IN ẤN HOẶC GỬI ZALO
 # ==============================================================================
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
-LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
+LINK_PHU_HUYNH = "tuyensinhlop1truongtieuhocduonghoa-4cmxb6av9fjiixqqcwehan.streamlit.app"  
 
 col_qr1, col_qr2 = st.columns(2)
 
