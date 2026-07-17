@@ -5,17 +5,20 @@ import streamlit as st
 from supabase import Client, create_client
 
 # ==============================================================================
-# CẤU HÌNH BIẾN NĂM HỌC HỆ THỐNG ĐỒNG BỘ
+# CẤU HÌNH BIẾN NĂM HỌC VÀ ĐƯỜNG DẪN KẾT NỐI HỆ THỐNG ĐỒNG BỘ
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
-SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
+SUPABASE_URL = "https://supabase.co" 
 
 try:
+    # Lấy key bảo mật ngầm khi chạy trực tuyến trên Streamlit Cloud
     SUPABASE_KEY = st.secrets["supabase_key"]
 except Exception:
+    # Key dùng tạm dưới máy tính local
     SUPABASE_KEY = "sb_secret_yjs4xz1bfe-oxhv0lob0-g_yiwbh9k2"
 
 try:
+    # Khởi tạo kết nối đám mây chính thức
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
     st.error(f"Lỗi kết nối hệ thống đám mây Supabase: {e}")
@@ -32,14 +35,14 @@ st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương
 # TỰ ĐỘNG SINH MÃ QR ĐỂ IN ẤN HOẶC GỬI ZALO
 # ==============================================================================
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
-# LƯU Ý: Sau khi đẩy file 'form_phu_huynh.py' lên Streamlit Cloud, hãy copy link web nhận được dán thay thế vào dòng dưới này:
 LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
 
 col_qr1, col_qr2 = st.columns(2)
 
 with col_qr1:
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
-    qr.add_data(LINK_PHU_HUYNH.encode('utf-8))
+    # Ép mã QR mã hóa dạng bytes để giữ nguyên chữ thường của link, tránh lỗi Not Found
+    qr.add_data(LINK_PHU_HUYNH.encode('utf-8'))
     qr.make(fit=True)
     img_qr = qr.make_image(fill_color="black", back_color="white")
     
@@ -119,7 +122,7 @@ if password == "123456":
             if len(student_list) > 0:
                 selected_student = st.selectbox("Chọn học sinh cần xem ảnh thẻ BHYT:", student_list)
                 img_url = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                if len(img_url) > 0 and pd.notna(img_url)[0] and str(img_url[0]).startswith("http"):
+                if len(img_url) > 0 and pd.notna(img_url[0]) and str(img_url[0]).startswith("http"):
                     st.image(img_url[0], caption=f"Ảnh thẻ BHYT của học sinh {selected_student}", width=400)
                 else:
                     st.warning("Học sinh này chưa có ảnh thẻ BHYT hoặc đường dẫn ảnh không hợp lệ.")
