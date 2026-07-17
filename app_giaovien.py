@@ -39,7 +39,7 @@ col_qr1, col_qr2 = st.columns(2)
 
 with col_qr1:
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
-    qr.add_data(LINK_PHU_HUYNH)
+    qr.add_data(LINK_PHU_HUYNH.encode('utf-8))
     qr.make(fit=True)
     img_qr = qr.make_image(fill_color="black", back_color="white")
     
