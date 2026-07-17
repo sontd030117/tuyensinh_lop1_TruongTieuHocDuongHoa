@@ -33,7 +33,7 @@ st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương
 # ==============================================================================
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
 # LƯU Ý: Sau khi đẩy file 'form_phu_huynh.py' lên Streamlit Cloud, hãy copy link web nhận được dán thay thế vào dòng dưới này:
-LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app/"  
+LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
 
 col_qr1, col_qr2 = st.columns(2)
 
