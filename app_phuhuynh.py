@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 from supabase import Client, create_client
 
 # ==============================================================================
-# CẤU HÌNH HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY SUPABASE VÀ KHỞI TẠO GIAO DIỆN
+# PHẦN 1: CẤU HÌNH HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY SUPABASE VÀ KHỞI TẠO GIAO DIỆN
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
@@ -31,7 +31,7 @@ st.set_page_config(
 
 st.title("📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
 st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
-st.info("💡 Hướng dẫn: Biểu mẫu hỗ trợ phụ huynh ký tay cảm ứng trực tiếp. Vui lòng chọn địa danh Quê quán và Địa chỉ cư trú thời gian thực.")
+st.info("💡 Hướng dẫn: Biểu mẫu tích hợp công nghệ Signature Pad nghệ thuật. Phụ huynh vuốt ngón tay nhẹ nhàng để ký.")
 
 DATA_34_TINH_THANH = {
     "Tỉnh Kiên Giang": {
@@ -46,12 +46,10 @@ DATA_34_TINH_THANH = {
     },
     "Thành phố Hồ Chí Minh": {
         "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Cô Giang", "Phường Tân Định"],
-        "Quận 3": ["Phường Võ Thị Sáu (Sáp nhập)", "Phường 1", "Phường 2", "Phường 4"],
         "Thành phố Thủ Đức": ["Phường Thủ Thiêm", "Phường An Khánh", "Phường Hiệp Bình Chánh", "Phường Linh Đông"]
     },
     "Thành phố Hà Nội": {
-        "Quận Hoàn Kiếm": ["Phường Đồng Xuân", "Phường Hàng Bạc", "Phường Hàng Bồ", "Phường Tràng Tiền"],
-        "Quận Ba Đình": ["Phường Đội Cấn", "Phường Kim Mã", "Phường Quán Thánh", "Phường Trúc Bạch"]
+        "Quận Hoàn Kiếm": ["Phường Đồng Xuân", "Phường Hàng Bạc", "Phường Hàng Bồ", "Phường Tràng Tiền"]
     },
     "Thành phố Cần Thơ": {
         "Quận Ninh Kiều": ["Phường Tân An (Sáp nhập mới)", "Phường Thới Bình", "Phường An Hòa", "Phường An Khánh"]
@@ -127,14 +125,12 @@ else:
     with col_co2:
         co_huyen_sel = st.selectbox("Chọn Quận/Huyện (Chỗ ở)", list(DATA_34_TINH_THANH[co_tinh_sel].keys()))
     with col_co3:
-        # ĐÃ FIX: Sửa lỗi ghi đè biến DATA_HANH_CHINH gây trắng màn hình
         co_xa_sel = st.selectbox("Chọn Xã/Phường (Chỗ ở)", DATA_34_TINH_THANH[co_tinh_sel][co_huyen_sel])
     co_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Chỗ ở hiện nay):", placeholder="Ví dụ: Số 45, Khấu Phố Ba Hòn")
     current_address = f"{co_chi_tiet}, {co_xa_sel}, {co_huyen_sel}, {co_tinh_sel}".strip(", ")
 st.write("---")
 st.markdown("#### 👤 Khai báo thông tin chi tiết hồ sơ học sinh")
 
-# ĐÃ FIX TRIỆT ĐỂ: Đồng bộ cơ chế đẩy dữ liệu chữ ký Canvas JavaScript sang bộ lưu trữ Python
 student_name = st.text_input("Họ và tên học sinh (Viết hoa có dấu):").strip()
 col_hs1, col_hs2 = st.columns(2)
 with col_hs1:
@@ -155,45 +151,41 @@ mother_job = st.text_input("Nghề nghiệp mẹ:")
 uploaded_file = st.file_uploader("Nhấn để đính kèm ảnh mặt trước thẻ BHYT học sinh:", type=["jpg", "jpeg", "png"])
 
 st.markdown("#### ✍️ Xác nhận ký tên bằng tay cảm ứng")
-st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay ký trực tiếp vào khung trắng bên dưới. Nếu vẽ lỗi bấm 'XÓA ĐỂ KÝ LẠI'.")
+st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay vuốt nhẹ để ký vào ô trống trắng. Bấm nút màu đỏ nếu ký lại.")
 
-# Mã đồng bộ hóa trạng thái Canvas HTML5 bắt buộc phải dồn chuỗi liên tục
-canvas_html = f"""
+canvas_html = """
 <div style="text-align: center;">
-    <canvas id="sig-canvas" width="450" height="180" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none;"></canvas>
-    <br><button type="button" id="sig-clearBtn" style="margin-top: 8px; padding: 6px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">XÓA ĐỂ KÝ LẠI</button>
+    <div style="display: inline-block; border: 2px dashed #999; background-color: #ffffff; border-radius: 4px;">
+        <canvas id="signature-pad" width="450" height="180" style="touch-action: none; display: block;"></canvas>
+    </div>
+    <br>
+    <button type="button" id="clear" style="margin-top: 8px; padding: 6px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">XÓA KÝ LẠI</button>
 </div>
+<script src="https://jsdelivr.net"></script>
 <script>
-    var canvas = document.getElementById("sig-canvas"); var ctx = canvas.getContext("2d");
-    ctx.strokeStyle = "#0b1d3a"; ctx.lineWidth = 3.5; var drawing = false;
-    
-    function getPos(c, e) {{ var r = c.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return {{ x: t.clientX - r.left, y: t.clientY - r.top }}; }}
-    function draw(e) {{ if(!drawing) return; var p = getPos(canvas, e); ctx.lineTo(p.x, p.y); ctx.stroke(); }}
-    
-    canvas.addEventListener("mousedown", function(e){{ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); }});
-    canvas.addEventListener("mousemove", draw);
-    window.addEventListener("mouseup", function(){{ if(drawing){{ drawing=false; window.parent.postMessage({{type:'sig-save', data:canvas.toDataURL()}}, '*'); }} }});
-    
-    canvas.addEventListener("touchstart", function(e){{ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); e.preventDefault(); }});
-    canvas.addEventListener("touchmove", function(e){{ draw(e); e.preventDefault(); }});
-    canvas.addEventListener("touchend", function(){{ drawing=false; window.parent.postMessage({{type:'sig-save', data:canvas.toDataURL()}}, '*'); }});
-    
-    document.getElementById("sig-clearBtn").addEventListener("click", function(){{ canvas.width=canvas.width; ctx.strokeStyle="#0b1d3a"; ctx.lineWidth=3.5; window.parent.postMessage({{type:'sig-save', data:''}}, '*'); }});
+    var canvas = document.getElementById('signature-pad');
+    var signaturePad = new SignaturePad(canvas, { minWidth: 1.5, maxWidth: 4, penColor: "#0b1d3a" });
+    function sendSignature() {
+        var dataStr = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+        window.parent.postMessage({type: 'sig-pad-save', data: dataStr}, '*');
+    }
+    canvas.addEventListener("touchend", sendSignature); canvas.addEventListener("mouseup", sendSignature);
+    document.getElementById('clear').addEventListener('click', function () {
+        signaturePad.clear(); window.parent.postMessage({type: 'sig-pad-save', data: ''}, '*');
+    });
 </script>
 """
-components.html(canvas_html, height=230)
+components.html(canvas_html, height=240)
 
-# Khối tiếp nhận tin nhắn ngầm từ JavaScript đẩy ngược lên Python SessionState
-import streamlit.components.v1 as cb
-st.markdown("""<script>window.addEventListener('message', function(e) { if(e.data.type === 'sig-save') { const el = window.parent.document.querySelector('input[aria-label="sig_holder"]'); if(el) { el.value = e.data.data; el.dispatchEvent(new Event('input', { bubbles: true })); } } });</script>""", unsafe_allow_html=True)
-sig_base64 = st.text_input("Chuỗi xác thực chữ ký điện tử:", key="sig_holder", label_visibility="collapsed")
+st.markdown("""<script>window.addEventListener('message', function(e) { if(e.data.type === 'sig-pad-save') { const el = window.parent.document.querySelector('input[aria-label="sig_pad_holder"]'); if(el) { el.value = e.data.data; el.dispatchEvent(new Event('input', { bubbles: true })); } } });</script>""", unsafe_allow_html=True)
+sig_base64 = st.text_input("Chuỗi chữ ký:", key="sig_pad_holder", label_visibility="collapsed")
 
 st.write("")
 if st.button("🚀 XÁC NHẬN GỬI HỒ SƠ ĐĂNG KÝ TUYỂN SINH"):
     if not student_name or not student_dob or not uploaded_file:
         st.error("❌ Vui lòng nhập đầy đủ tên học sinh, ngày sinh và đính kèm ảnh thẻ BHYT!")
     elif not sig_base64 or len(sig_base64) < 150:
-        st.error("❌ Phụ huynh vui lòng dùng ngón tay ký tên vào khung trắng trước khi nộp đơn!")
+        st.error("❌ Phụ huynh vui lòng dùng ngón tay ký tên vào ô vuông trắng trước khi nộp đơn!")
     else:
         with st.spinner("⏳ Đang tải dữ liệu hồ sơ lên đám mây trường..."):
             try:
