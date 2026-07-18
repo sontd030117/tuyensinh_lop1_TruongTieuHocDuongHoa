@@ -11,15 +11,19 @@ NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
 
 try:
+    # Lấy key bảo mật ngầm khi chạy trực tuyến trên Streamlit Cloud
     SUPABASE_KEY = st.secrets["supabase_key"]
 except Exception:
+    # Key dùng tạm dưới máy tính local
     SUPABASE_KEY = "sb_secret_yjs4xz1bfe-oxhv0lob0-g_yiwbh9k2"
 
 try:
+    # Khởi tạo kết nối đám mây chính thức
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
     st.error(f"Lỗi kết nối hệ thống đám mây Supabase: {e}")
 
+# Cấu hình giao diện quản trị rộng toàn màn hình máy tính
 st.set_page_config(
     page_title=f"Hệ thống quản lý tuyển sinh {NAM_HOC}",
     page_icon="📊",
@@ -27,7 +31,7 @@ st.set_page_config(
 )
 st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương Hòa (Năm học {NAM_HOC})")
 
-# ĐÃ CẬP NHẬT: Nhúng phông chữ viết tay giả lập nét ký thật Mrs Saint Delafield
+# Nhúng phông chữ viết tay giả lập nét ký thật Mrs Saint Delafield
 st.markdown(
     """
     <style>
@@ -52,34 +56,45 @@ col_qr1, col_qr2 = st.columns(2)
 
 with col_qr1:
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    # Ép mã QR mã hóa dạng bytes để giữ nguyên chữ thường của link, tránh lỗi Not Found
     qr.add_data(LINK_PHU_HUYNH.encode('utf-8'))
     qr.make(fit=True)
     img_qr = qr.make_image(fill_color="black", back_color="white")
     
     img_buffer = io.BytesIO()
     img_qr.save(img_buffer, format="PNG")
-    st.image(img_buffer.getvalue(), caption="Click chuột phải chọn Lưu ảnh để in ấn", width=200)
+    st.image(
+        img_buffer.getvalue(),
+        caption="Click chuột phải chọn Lưu ảnh để in ấn",
+        width=200,
+    )
 
 with col_qr2:
     st.write("")
     st.success(f"**🔗 Đường dẫn trực tuyến của phiếu điền:** `{LINK_PHU_HUYNH}`")
     st.info(f"""
     **💡 Hướng dẫn vận hành nhanh dành cho Giáo viên:**
-    1. **Tải mã QR:** Bạn nhấp chuột phải vào ảnh mã QR bên cạnh -> Chọn **Lưu hình ảnh thành...** để đem đi in ấn.
-    2. **Phụ huynh quét mã:** Phụ huynh chỉ cần dùng điện thoại quét mã này để mở phiếu điền.
-    3. **Lấy dữ liệu:** Giáo viên nhập mật khẩu hệ thống ở ô phía dưới để kiểm tra dữ liệu và tải file Excel năm học {NAM_HOC}.
+    1. **Tải mã QR:** Bạn nhấp chuột phải vào ảnh mã QR bên cạnh -> Chọn **Lưu hình ảnh thành...** để đem đi in ấn hoặc gửi Zalo cho phụ huynh.
+    2. **Phụ huynh quét mã:** Phụ huynh chỉ cần dùng điện thoại quét mã này để mở phiếu điền và chụp ảnh thẻ BHYT từ xa.
+    3. **Lấy dữ liệu:** Giáo viên nhập mật khẩu hệ thống ở ô phía dưới để kiểm tra bảng dữ liệu thời gian thực và tải file Excel năm học {NAM_HOC}.
     """)
 
 st.write("---")
-password = st.text_input("Vui lòng nhập mật khẩu quản trị để xem dữ liệu học sinh:", type="password")
+
+password = st.text_input(
+    "Vui lòng nhập mật khẩu quản trị để xem dữ liệu học sinh:",
+    type="password",
+)
 # ==============================================================================
-# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, HIỂN THỊ BIỂU ĐỒ THỐNG KÊ VÀ XUẤT EXCEL
+# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY REAL-TIME, SỬA MÚI GIỜ VN VÀ XUẤT EXCEL
 # ==============================================================================
 if password == "123456":  
     st.subheader(f"📋 Danh sách hồ sơ phiếu điền trực tuyến từ phụ huynh ({NAM_HOC})")
 
-    with st.spinner("Đang kết nối đám mây lấy dữ liệu mới nhất..."):
+    # Loại bỏ hoàn toàn bộ nhớ đệm Cache để tải dữ liệu Real-time ngay lập tức khi vào trang
+    with st.spinner("⏳ Đang kết nối trực tiếp đám mây lấy dữ liệu mới nhất..."):
         try:
+            # Truy vấn toàn bộ dữ liệu, sắp xếp hồ sơ mới nộp lên đầu bảng
             response = supabase.table("ho_so_tuyen_sinh").select("*").order("created_at", desc=True).execute()
             rows = response.data
         except Exception as e:
@@ -89,38 +104,56 @@ if password == "123456":
     if rows:
         df = pd.DataFrame(rows)
 
+        # KHỐI BIỂU ĐỒ THỐNG KÊ SỐ LƯỢNG HỒ SƠ THEO NGÀY (SỬA MÚI GIỜ VIỆT NAM CHUẨN XÁC)
         st.markdown("### 📈 Biểu đồ tiến độ phụ huynh nộp đơn")
         if "created_at" in df.columns:
             try:
                 df_chart = df.copy()
-                df_chart["Ngay_Nop"] = pd.to_datetime(df_chart["created_at"]).dt.date
+                # Ép kiểu thời gian sang múi giờ Việt Nam (Asia/Ho_Chi_Minh) để không bị lệch ngày
+                df_chart["Time_VN"] = pd.to_datetime(df_chart["created_at"]).dt.tz_convert("Asia/Ho_Chi_Minh")
+                df_chart["Ngay_Nop"] = df_chart["Time_VN"].dt.date
+                
+                # Gom nhóm đếm số lượng hồ sơ nộp phát sinh theo từng ngày
                 df_grouped = df_chart.groupby("Ngay_Nop").size().reset_index(name="Số lượng hồ sơ")
                 df_grouped = df_grouped.sort_values(by="Ngay_Nop").set_index("Ngay_Nop")
                 
+                # Hiển thị số liệu tổng quan nhanh dạng số (Metrics)
                 col_m1, col_m2 = st.columns(2)
                 with col_m1:
                     st.metric(label="Tổng số hồ sơ tiếp nhận", value=f"{len(df)} trẻ")
                 with col_m2:
                     st.metric(label="Số ngày có phụ huynh khai đơn", value=f"{len(df_grouped)} ngày")
                 
+                # Vẽ biểu đồ đường
                 st.line_chart(df_grouped, use_container_width=True)
             except Exception as chart_err:
-                st.warning(f"Tạm thời chưa thể dựng biểu đồ tiến độ: {chart_err}")
+                # Cơ chế dự phòng nếu bản ghi hệ thống gặp lỗi chuỗi định dạng thời gian
+                try:
+                    df_chart = df.copy()
+                    df_chart["Ngay_Nop"] = pd.to_datetime(df_chart["created_at"]).dt.date
+                    df_grouped = df_chart.groupby("Ngay_Nop").size().reset_index(name="Số lượng hồ sơ")
+                    df_grouped = df_grouped.sort_values(by="Ngay_Nop").set_index("Ngay_Nop")
+                    st.line_chart(df_grouped, use_container_width=True)
+                except:
+                    st.warning("Biểu đồ đang cập nhật chuỗi thời gian...")
 
         st.write("---")
         st.markdown("### 📝 Chi tiết danh sách hồ sơ tuyển sinh")
 
+        # Cấu hình danh mục cột hiển thị (Đồng bộ đầy đủ cả 2 cột nghề nghiệp mới)
         column_mapping = {
             "created_at": "Thời gian đăng ký", "parent_name": "Người khai đơn", "current_address": "Chỗ ở hiện nay",
             "student_name": "Tên học sinh", "student_gender": "Giới tính", "student_ethnic": "Dân tộc",
             "student_dob": "Ngày sinh", "student_pob": "Nơi sinh", "permanent_address": "Thường trú",
-            "father_name": "Họ tên cha", "father_phone": "SĐT Cha", "mother_name": "Họ tên mẹ",
-            "mother_phone": "SĐT Mẹ", "insurance_image": "Đường dẫn ảnh thẻ BHYT", "parent_signature": "Dữ liệu chữ ký mạng"
+            "father_name": "Họ tên cha", "father_phone": "SĐT Cha", "father_job": "Nghề nghiệp cha",
+            "mother_name": "Họ tên mẹ", "mother_phone": "SĐT Mẹ", "mother_job": "Nghề nghiệp mẹ",
+            "insurance_image": "Đường dẫn ảnh thẻ BHYT", "parent_signature": "Dữ liệu chữ ký mạng"
         }
 
         available_cols = [col for col in column_mapping.keys() if col in df.columns]
         df_display = df[available_cols].rename(columns=column_mapping)
 
+        # Ẩn cột chứa chuỗi mã hóa chữ ký thô loằng ngoằng để bảng chính hiển thị gọn gàng
         cols_to_show = [c for c in df_display.columns if c != "Dữ liệu chữ ký mạng"]
         st.dataframe(df_display[cols_to_show], use_container_width=True)
 
@@ -134,7 +167,11 @@ if password == "123456":
             with col_view1:
                 st.markdown("**Ảnh thẻ BHYT:**")
                 img_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                img_url = str(img_data_arr).strip() if len(img_data_arr) > 0 else ""
+                
+                # Giải mã bóc tách dữ liệu mảng ảnh dôi dư dấu ngoặc vuông
+                img_url = ""
+                if len(img_data_arr) > 0 and pd.notna(img_data_arr):
+                    img_url = str(img_data_arr).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
                 
                 if img_url and img_url.startswith("http"):
                     st.image(img_url, caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
@@ -147,11 +184,10 @@ if password == "123456":
                     sig_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
                     p_name_arr = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
                     
-                    # Giải mã bóc tách loại bỏ hoàn toàn mảng dôi dư
+                    # Giải mã bóc tách loại bỏ hoàn toàn dấu mảng thừa dấu ngoặc vuông ['...']
                     raw_sig = str(sig_data_arr).strip() if len(sig_data_arr) > 0 else ""
                     actual_name = str(p_name_arr).strip() if len(p_name_arr) > 0 else ""
                     
-                    # Hàm dọn dẹp các ký tự mảng thừa gán từ Supabase để lấy chuỗi text gốc
                     clean_sig = raw_sig.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
                     actual_name = actual_name.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
                     
@@ -175,6 +211,7 @@ if password == "123456":
                 else:
                     st.error("Hệ thống đám mây hiện thiếu cấu trúc lưu trữ trường `parent_signature`.")
 
+        # Xử lý tối ưu giãn rộng cột Excel không lỗi bằng hàm get_column_letter chuẩn
         from openpyxl.utils import get_column_letter
         buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
