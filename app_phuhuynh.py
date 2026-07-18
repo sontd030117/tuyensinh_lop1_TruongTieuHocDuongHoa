@@ -75,7 +75,7 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         st.markdown(
             """
             <div style='text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 2px;'>
-                KHÁCH HÀNG YÊU CẦU
+                CHỮ KÝ YÊU CẦU
             </div>
             <div style='text-align: center; font-style: italic; color: gray; font-size: 12px; margin-bottom: 8px;'>
                 (Chữ ký điện tử hệ thống)
