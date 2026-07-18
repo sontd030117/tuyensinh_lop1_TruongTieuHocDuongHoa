@@ -181,10 +181,10 @@ if uploaded_file:
 st.markdown("#### ✍️ Xác nhận ký tên bằng tay cảm ứng và Nộp đơn")
 st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay vuốt nhẹ để ký vào ô trống trắng. Sau đó bấm nút màu xanh phía dưới chữ ký để nộp đơn.")
 
-# ĐÃ FIX TRIỆT ĐỂ LỖI BẢO MẬT: Nút gửi đơn nằm trong Canvas đẩy thẳng trực tiếp API lên đám mây Supabase
+# ĐÃ SỬA TRIỆT ĐỂ: Thêm touch-action và preventDefault để khóa cuộn màn hình trên di động, ký tay siêu nhạy
 canvas_html = f"""
 <div style="text-align: center; font-family: Arial, sans-serif;">
-    <canvas id="sig-canvas" width="440" height="170" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none; border-radius:4px;"></canvas>
+    <canvas id="sig-canvas" width="440" height="170" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none !important; -webkit-touch-callout: none; -webkit-user-select: none; border-radius:4px;"></canvas>
     <br>
     <button type="button" id="sig-clearBtn" style="margin-top: 8px; margin-bottom: 15px; padding: 6px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">XÓA KÝ LẠI</button>
     <br>
@@ -194,17 +194,45 @@ canvas_html = f"""
 
 <script>
     var canvas = document.getElementById("sig-canvas"); var ctx = canvas.getContext("2d");
-    ctx.strokeStyle = "#0b1d3a"; ctx.lineWidth = 3.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; var drawing = false;
+    ctx.strokeStyle = "#0b1d3a"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.lineJoin = "round"; var drawing = false;
     
-    function getPos(c, e) {{ var r = c.getBoundingClientRect(); var t = e.touches ? e.touches : e; return {{ x: t.clientX - r.left, y: t.clientY - r.top }}; }}
-    function draw(e) {{ if(!drawing) return; var p = getPos(canvas, e); ctx.lineTo(p.x, p.y); ctx.stroke(); }}
+    function getPos(c, e) {{
+        var r = c.getBoundingClientRect();
+        var t = e.touches && e.touches.length > 0 ? e.touches[0] : e;
+        return {{ x: t.clientX - r.left, y: t.clientY - r.top }};
+    }}
+    
+    function draw(e) {{
+        if(!drawing) return;
+        var p = getPos(canvas, e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    }}
     
     canvas.addEventListener("mousedown", function(e){{ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); }});
     canvas.addEventListener("mousemove", draw); window.addEventListener("mouseup", function(){{ drawing=false; }});
-    canvas.addEventListener("touchstart", function(e){{ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); e.preventDefault(); }});
-    canvas.addEventListener("touchmove", function(e){{ draw(e); e.preventDefault(); }}); canvas.addEventListener("touchend", function(){{ drawing=false; }});
     
-    document.getElementById("sig-clearBtn").addEventListener("click", function(){{ canvas.width=canvas.width; ctx.strokeStyle="#0b1d3a"; ctx.lineWidth=3.5; ctx.lineCap="round"; ctx.lineJoin="round"; }});
+    // ĐỒNG BỘ: Sự kiện vuốt tay di động được khóa chặn cuộn trang để bắt nét vẽ máy chính xác
+    canvas.addEventListener("touchstart", function(e){{
+        drawing = true; ctx.beginPath();
+        var p = getPos(canvas, e);
+        ctx.moveTo(p.x, p.y);
+        if (e.cancelable) e.preventDefault();
+    }}, {{ passive: false }});
+    
+    canvas.addEventListener("touchmove", function(e){{
+        if (drawing) {{
+            draw(e);
+            if (e.cancelable) e.preventDefault();
+        }}
+    }}, {{ passive: false }});
+    
+    canvas.addEventListener("touchend", function(e){{
+        drawing = false;
+        if (e.cancelable) e.preventDefault();
+    }}, {{ passive: false }});
+    
+    document.getElementById("sig-clearBtn").addEventListener("click", function(){{ canvas.width=canvas.width; ctx.strokeStyle="#0b1d3a"; ctx.lineWidth=4; ctx.lineCap="round"; ctx.lineJoin="round"; }});
 
     document.getElementById("sig-submitBtn").addEventListener("click", function(){{
         var msgDiv = document.getElementById("status-msg");
@@ -242,7 +270,7 @@ canvas_html = f"""
         }})
         .then(response => {{
             if(response.ok) {{
-                msgDiv.style.color = "#4caf50"; msgDiv.innerHTML = "🎉 NỘP HỒ SƠ THÀNH CÔNG! Nhà trường đã tiếp nhận và ghi nhận thành công đơn đăng ký.";
+                msgDiv.style.color = "#4caf50"; msgDiv.innerHTML = "🎉 NỘP HỒ SƠ THÀNH CÔNG! Nhà trường đã ghi nhận chữ ký tay của phụ huynh.";
                 setTimeout(function() {{ window.parent.location.reload(); }}, 2000);
             }} else {{
                 msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ Đã xảy ra lỗi kết nối đám mây, phụ huynh vui lòng bấm nút gửi lại!";
