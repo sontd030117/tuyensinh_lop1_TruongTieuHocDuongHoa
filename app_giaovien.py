@@ -160,14 +160,17 @@ if password == "123456":
         if len(student_list) > 0:
             selected_student = st.selectbox("Chọn học sinh cần kiểm tra & in ấn hồ sơ:", student_list)
             
-            # Lọc trích xuất bản ghi học sinh cụ thể
-            student_row = df[df["student_name"] == selected_student].iloc
+            # ----------------------------------------------------------------------
+            # ĐÃ FIX LỖI CRASH: Chuyển đổi dòng dữ liệu về Dictionary chuẩn để gọi .get() an toàn
+            # ----------------------------------------------------------------------
+            matched_rows = df[df["student_name"] == selected_student]
+            student_row = matched_rows.iloc[0].to_dict() if not matched_rows.empty else {}
             
             img_url = str(student_row.get("insurance_image", "")).strip()
             raw_sig = str(student_row.get("parent_signature", "")).strip()
             actual_name = str(student_row.get("parent_name", "")).strip()
             
-            # Dọn dẹp mảng thô bọc dữ liệu dấu ngoặc vuông
+            # Dọn dẹp mảng thô bọc dữ liệu dấu ngoặc vuông dôi dư từ mảng
             clean_sig = raw_sig.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
             actual_name = actual_name.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
             
@@ -189,16 +192,19 @@ if password == "123456":
                     font-size: 16px; 
                     line-height: 1.6;
                 ">
+                    <!-- Tiêu ngữ chuẩn văn bản hành chính -->
                     <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 3px;">
                         CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập - Tự do - Hạnh phúc
                     </div>
                     <div style="text-align: center; margin-bottom: 25px; letter-spacing: 2px;">---------------</div>
                     
+                    <!-- Tiêu đề biểu mẫu phiếu -->
                     <div style="text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; text-transform: uppercase;">
                         PHIẾU ĐĂNG KÝ TUYỂN SINH LỚP 1<br><span style="font-size: 15px; font-weight: normal;">NĂM HỌC: {NAM_HOC}</span>
                     </div>
                     <div style="text-align: center; font-style: italic; margin-top: -15px; margin-bottom: 35px;">Kính gửi: Ban Giám hiệu Trường Tiểu học Dương Hòa</div>
                     
+                    <!-- Phần 1: Thông tin học sinh -->
                     <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">1. THÔNG TIN HỌC SINH:</div>
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                         <tr>
@@ -214,13 +220,14 @@ if password == "123456":
                             <td style="padding: 6px 0;">- Quê quán: {student_row.get('hometown', '[Chưa cập nhật]')}</td>
                         </tr>
                     </table>
-
+                    <!-- Phần 2: Cư trú -->
                     <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">2. THÔNG TIN CƯ TRÚ:</div>
                     <div style="padding: 2px 0; margin-bottom: 20px; text-align: justify;">
                         - Địa chỉ đăng ký thường trú: {student_row.get('permanent_address', '')}<br>
                         - Địa chỉ chỗ ở hiện nay (thực tế): {student_row.get('current_address', '')}
                     </div>
 
+                    <!-- Phần 3: Gia đình -->
                     <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">3. THÔNG TIN GIA ĐÌNH:</div>
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px;">
                         <tr>
@@ -280,7 +287,7 @@ if password == "123456":
             
             st.button("🖨️ BẤM VÀO ĐÂY ĐỂ TIẾN HÀNH IN PHIẾU NÀY RA GIẤY A4", on_click=st.rerun)
 
-        # Khối tạo file báo cáo Excel tổng hợp hỗ trợ giãn cột tự động
+        # Khối tạo file báo cáo Excel tổng hợp hỗ trợ giãn cột tự động không lỗi
         from openpyxl.utils import get_column_letter
         buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
