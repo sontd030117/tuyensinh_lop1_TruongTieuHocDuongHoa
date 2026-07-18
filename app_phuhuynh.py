@@ -70,6 +70,22 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         student_ethnic = st.text_input("Dân tộc (Ví dụ: Kinh, Khơ-me, Hoa):", value="Kinh")
         student_pob = st.text_input("Nơi sinh (Ghi rõ Tỉnh hoặc Thành phố):")
 
+    # ----------------------------------------------------------------------
+    # ĐÃ BỔ SUNG: CHỌN QUÊ QUÁN TỰ ĐỘNG THEO CẤP HÀNH CHÍNH MỚI SÁP NHẬP
+    # ----------------------------------------------------------------------
+    st.markdown("**📍 Quê quán của học sinh (Ghi theo Giấy khai sinh bản gốc)**")
+    col_qq1, col_qq2, col_qq3 = st.columns(3)
+    with col_qq1:
+        qq_tinh = st.selectbox("Chọn Tỉnh/Thành (Quê quán)", list(DATA_HANH_CHINH.keys()), key="qq_tinh")
+    with col_qq2:
+        qq_huyen = st.selectbox("Chọn Quận/Huyện (Quê quán)", list(DATA_HANH_CHINH[qq_tinh].keys()), key="qq_huyen")
+    with col_qq3:
+        qq_xa = st.selectbox("Chọn Xã/Phường (Quê quán)", DATA_HANH_CHINH[qq_tinh][qq_huyen], key="qq_xa")
+    
+    # Gộp chuỗi thông tin quê quán
+    hometown = f"{qq_xa}, {qq_huyen}, {qq_tinh}"
+
+    # ----------------------------------------------------------------------
     st.markdown("#### 🏠 2. Thông tin cư trú của gia đình")
     st.markdown("**📍 Địa chỉ đăng ký thường trú (Theo Sổ hộ khẩu/Thông tin cư trú)**")
     col_tt1, col_tt2, col_tt3 = st.columns(3)
@@ -216,6 +232,7 @@ if submit_button:
                 insert_data = {
                     "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
                     "student_ethnic": student_ethnic, "student_pob": student_pob, 
+                    "hometown": hometown, # ĐÃ BỔ SUNG: Đồng bộ đẩy dữ liệu quê quán lên mây
                     "permanent_address": permanent_address, 
                     "current_address": current_address, 
                     "parent_name": parent_name,
