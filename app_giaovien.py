@@ -39,7 +39,6 @@ LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsf
 col_qr1, col_qr2 = st.columns(2)
 
 with col_qr1:
-    # Ép cấu hình qrcode giữ nguyên 100% định dạng chữ thường để quét không bị lỗi 404
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -135,16 +134,17 @@ if password == "123456":
         cols_to_show = [c for c in df_display.columns if c != "Dữ liệu chữ ký mạng"]
         st.dataframe(df_display[cols_to_show], use_container_width=True)
 
-        # KHỐI CHỨC NĂNG XÓA HỒ SƠ LỖI DO PHUYNH NHẬP SAI
+        # ĐÃ SỬA: Khối quản lý xóa hồ sơ lỗi được chuẩn hóa chỉ mục dòng không gây lỗi ngầm
         st.markdown("### 🗑️ Quản lý xóa hồ sơ nhập sai")
         col_del1, col_del2 = st.columns(2)
         with col_del1:
             student_to_delete = st.selectbox("Chọn tên học sinh cần xóa khỏi hệ thống:", df_display["Tên học sinh"].unique(), key="del_select")
         with col_del2:
             st.write("<br>", unsafe_allow_html=True)
-            if st.button("❌ XÓA HỒ SƠ NÀY", use_container_width=True, type="primary"):
-                if not df[df["student_name"] == student_to_delete].empty:
-                    row_to_del = df[df["student_name"] == student_to_delete].iloc
+            if st.button("❌ XÓA HỒ SƠ NÀY", use_container_width=True, type="primary"):
+                filtered_del = df[df["student_name"] == student_to_delete]
+                if not filtered_del.empty:
+                    row_to_del = filtered_del.iloc[0].to_dict()
                     record_id = row_to_del.get("id")
                     img_path_raw = str(row_to_del.get("insurance_image", ""))
                     
@@ -153,7 +153,10 @@ if password == "123456":
                             if "bhyt_bucket/" in img_path_raw:
                                 file_name_in_storage = img_path_raw.split("bhyt_bucket/")[-1]
                                 supabase_client.storage.from_("bhyt_bucket").remove([file_name_in_storage])
-                            supabase_client.table("ho_so_tuyen_sinh").delete().eq("student_name", student_to_delete).execute()
+                            if record_id:
+                                supabase_client.table("ho_so_tuyen_sinh").delete().eq("id", record_id).execute()
+                            else:
+                                supabase_client.table("ho_so_tuyen_sinh").delete().eq("student_name", student_to_delete).execute()
                             st.success(f"🎉 Đã xóa thành công toàn bộ hồ sơ của học sinh: {student_to_delete}!")
                             st.rerun()
                         except Exception as del_error:
@@ -168,7 +171,8 @@ if password == "123456":
             
             matched_data = df[df["student_name"] == selected_student]
             if not matched_data.empty:
-                student_row = matched_data.iloc.to_dict()
+                # ĐÃ FIX TRIỆT ĐỂ: Bổ sung bọc chỉ mục ngoặc vuông [0] để lấy chính xác bản ghi đầu tiên chuyển về dictionary
+                student_row = matched_data.iloc[0].to_dict()
                 
                 img_url = str(student_row.get("insurance_image", "")).strip()
                 raw_sig = str(student_row.get("parent_signature", "")).strip()
@@ -185,7 +189,7 @@ if password == "123456":
                 
                 st.markdown(f"{html_top}{html_body}{html_footer}", unsafe_allow_html=True)
                 
-                # GIẢI PHÁP ĐỘT PHÁ 100%: Sử dụng st.download_button chính quy của Streamlit để xuất file tài liệu biểu mẫu HTML sạch ra máy tính
+                # Tải file biểu mẫu HTML chính chủ của Streamlit (Vượt qua 100% rào cản Pop-up Blocker của Google Chrome)
                 full_html_document = f"""<html><head><title>Don_dang_ky_{selected_student}</title><style>body{{margin:0;padding:40px;background:white;color:black;}}</style></head><body>{html_top}{html_body}{html_footer}</body></html>"""
                 
                 st.write("<br>", unsafe_allow_html=True)
