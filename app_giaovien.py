@@ -38,7 +38,7 @@ st.markdown(
         @import url('https://googleapis.com');
         .digital-sig-text {
             font-family: 'Dancing Script', cursive;
-            font-size: 36px;
+            font-size: 42px; /* Tăng cỡ chữ lên cho bay bổng, rõ nét */
             color: #1a237e;
             text-align: center;
             padding: 10px;
@@ -149,7 +149,11 @@ if password == "123456":
             with col_view1:
                 st.markdown("**Ảnh thẻ BHYT:**")
                 img_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                img_url = str(img_data_arr).strip() if len(img_data_arr) > 0 else ""
+                
+                # Giải mã bóc tách dữ liệu mảng ảnh
+                img_url = ""
+                if len(img_data_arr) > 0 and pd.notna(img_data_arr[0]):
+                    img_url = str(img_data_arr[0]).strip()
                 
                 if img_url and img_url.startswith("http"):
                     st.image(img_url, caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
@@ -162,16 +166,23 @@ if password == "123456":
                     sig_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
                     p_name_arr = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
                     
-                    # Giải mã giá trị mảng thô
-                    actual_sig = str(sig_data_arr).strip() if len(sig_data_arr) > 0 else ""
-                    actual_name = str(p_name_arr).strip() if len(p_name_arr) > 0 else ""
+                    # ----------------------------------------------------------------------
+                    # ĐÃ SỬA TRIỆT ĐỂ: Bóc tách phần tử đầu tiên [0] của mảng để phá ngoặc vuông
+                    # ----------------------------------------------------------------------
+                    actual_sig = ""
+                    if len(sig_data_arr) > 0 and pd.notna(sig_data_arr[0]):
+                        actual_sig = str(sig_data_arr[0]).strip()
+                        
+                    actual_name = ""
+                    if len(p_name_arr) > 0 and pd.notna(p_name_arr[0]):
+                        actual_name = str(p_name_arr[0]).strip()
                     
                     if actual_sig and actual_sig != "None" and actual_sig != "nan":
                         st.markdown("<div style='border: 1px dashed #ccc; padding: 15px; width: 380px; text-align: center; background-color: #fff;'>", unsafe_allow_html=True)
-                        # ĐÃ SỬA THEO YÊU CẦU: Đổi tiêu đề chữ ký từ Khách Hàng Yêu Cầu thành Chữ Ký Tự Động
                         st.markdown("<div style='font-weight: bold; font-size: 14px;'>CHỮ KÝ TỰ ĐỘNG</div>", unsafe_allow_html=True)
                         st.markdown("<div style='font-style: italic; color: gray; font-size: 11px;'>(Hệ thống ký điện tử)</div>", unsafe_allow_html=True)
                         
+                        # Khớp nhận diện chuỗi sau khi đã phá vỡ định dạng mảng thành công
                         if actual_sig.startswith("TEXT_SIGNATURE:"):
                             clean_text = actual_sig.replace("TEXT_SIGNATURE:", "")
                             st.markdown(f"<div class='digital-sig-text'>{clean_text}</div>", unsafe_allow_html=True)
