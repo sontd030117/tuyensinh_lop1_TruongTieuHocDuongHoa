@@ -1,2 +1,3 @@
 supabase
 openpyxl
+qrcode[pil]
