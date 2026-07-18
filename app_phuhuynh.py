@@ -4,9 +4,8 @@ import uuid
 import base64
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components  # Nhúng vùng ký JavaScript thuần
 from supabase import Client, create_client
-from streamlit_canvas import st_canvas  # Tích hợp khung vẽ ký tay cảm ứng chính chủ
-from PIL import Image
 
 # ==============================================================================
 # PHẦN 1: CẤU HÌNH HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY SUPABASE VÀ KHỞI TẠO GIAO DIỆN
@@ -36,7 +35,7 @@ st.info("💡 Hướng dẫn: Biểu mẫu hỗ trợ phụ huynh ký tay cảm 
 
 DATA_34_TINH_THANH = {
     "Tỉnh Kiên Giang": {
-        "Huyện Kiên Lương": ["Thị trấn Kiên Lương", "Xã Dương Hòa", "Xã Hòa Điền", "Xã Kiên Bình", "Xã Bình An", "Xã Bình Trị", "Xã Hòn Nghệ"],
+        "Huyện Kiên Lương": ["Xã Dương Hòa", "Xã Hòa Điền", "Xã Kiên Bình", "Xã Bình An", "Xã Bình Trị", "Xã Hòn Nghệ", "Thị trấn Kiên Lương"],
         "Thành phố Rạch Giá": ["Phường Vĩnh Thanh Vân", "Phường Vĩnh Thanh", "Phường Vĩnh Lạc", "Phường An Hòa", "Phường An Bình", "Phường Rạch Sỏi"],
         "Thành phố Phú Quốc": ["Phường Dương Đông", "Phường An Thới", "Xã Hàm Ninh", "Xã Dương Tơ", "Xã Gành Dầu"],
         "Thành phố Hà Tiên": ["Phường Đông Hồ", "Phường Bình San", "Phường Pháo Đài", "Phường Tô Châu"]
@@ -130,56 +129,66 @@ else:
     co_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Chỗ ở hiện nay):", placeholder="Ví dụ: Số 45, Khấu Phố Ba Hòn")
     current_address = f"{co_chi_tiet}, {co_xa_sel}, {co_huyen_sel}, {co_tinh_sel}".strip(", ")
 st.write("---")
-with st.form("form_tuyen_sinh", clear_on_submit=False):
-    st.markdown("#### 👤 1. Thông tin cá nhân của học sinh")
-    student_name = st.text_input("Họ và tên học sinh (Viết hoa có dấu):").strip()
-    col_hs1, col_hs2 = st.columns(2)
-    with col_hs1:
-        student_gender = st.selectbox("Giới tính:", ["Nam", "Nữ"])
-        student_dob = st.text_input("Ngày sinh (Ví dụ: 15/08/2020):")
-    with col_hs2:
-        student_ethnic = st.text_input("Dân tộc:", value="Kinh")
-        student_pob = st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):")
+st.markdown("#### 👤 Khai báo thông tin chi tiết hồ sơ học sinh")
 
-    st.markdown("#### 👨‍👩‍👦 2. Thông tin cha mẹ hoặc Người giám hộ")
-    father_name = st.text_input("Họ tên cha:")
-    father_phone = st.text_input("SĐT cha:")
-    father_job = st.text_input("Nghề nghiệp cha:")
-    st.write("---") 
-    mother_name = st.text_input("Họ tên mẹ:")
-    mother_phone = st.text_input("SĐT mẹ:")
-    mother_job = st.text_input("Nghề nghiệp mẹ:")
+student_name = st.text_input("Họ và tên học sinh (Viết hoa có dấu):").strip()
+col_hs1, col_hs2 = st.columns(2)
+with col_hs1:
+    student_gender = st.selectbox("Giới tính:", ["Nam", "Nữ"])
+    student_dob = st.text_input("Ngày sinh (Ví dụ: 15/08/2020):")
+with col_hs2:
+    student_ethnic = st.text_input("Dân tộc:", value="Kinh")
+    student_pob = st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):")
 
-    st.markdown("#### 📷 3. Đính kèm ảnh chụp thẻ BHYT")
-    uploaded_file = st.file_uploader("Nhấn để tải file ảnh lên:", type=["jpg", "jpeg", "png"])
+father_name = st.text_input("Họ tên cha:")
+father_phone = st.text_input("SĐT cha:")
+father_job = st.text_input("Nghề nghiệp cha:")
 
-    # ĐÃ NÂNG CẤP DỨT ĐIỂM: Khung ký tên cảm ứng Python chính chủ phản hồi ngay lập tức
-    st.markdown("#### ✍️ 4. Phụ huynh ký tên bằng tay lên khung dưới đây")
-    st.caption("💡 Hướng dẫn: Dùng ngón tay vẽ nét ký trực tiếp vào ô màu xám bên dưới.")
+mother_name = st.text_input("Họ tên mẹ:")
+mother_phone = st.text_input("SĐT mẹ:")
+mother_job = st.text_input("Nghề nghiệp mẹ:")
+
+uploaded_file = st.file_uploader("Nhấn để đính kèm ảnh mặt trước thẻ BHYT học sinh:", type=["jpg", "jpeg", "png"])
+
+st.markdown("#### ✍️ Xác nhận ký tên bằng tay cảm ứng")
+st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay vuốt nhẹ để ký vào ô trống trắng. Bấm 'XÓA KÝ LẠI' nếu vẽ sai.")
+
+# GIẢI PHÁP ĐỒNG BỘ: Sử dụng Canvas HTML5 độc lập truyền dữ liệu theo thời gian thực
+canvas_html = """
+<div style="text-align: center;">
+    <canvas id="sig-canvas" width="440" height="170" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none; border-radius:4px;"></canvas>
+    <br><button type="button" id="sig-clearBtn" style="margin-top: 8px; padding: 6px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">XÓA KÝ LẠI</button>
+</div>
+<script>
+    var canvas = document.getElementById("sig-canvas"); var ctx = canvas.getContext("2d");
+    ctx.strokeStyle = "#0b1d3a"; ctx.lineWidth = 3.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; var drawing = false;
     
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 255, 255, 0)",
-        stroke_width=3,            # Độ thanh đậm của nét mực
-        stroke_color="#0b1d3a",     # Màu mực xanh đen chuẩn văn bản
-        background_color="#eeeeee", # Ô màu xám nhận diện
-        height=150,
-        width=340,
-        drawing_mode="freedraw",
-        key="canvas_sig",
-    )
-
-    st.markdown("---")
-    st.caption("(*) Phụ huynh cam kết các thông tin khai báo trên phiếu điện tử này là hoàn toàn chính xác.")
-    submit_button = st.form_submit_button("🚀 GỬI HỒ SƠ ĐĂNG KÝ NGAY")
-
-if submit_button:
-    # Hàm đếm số nét vẽ thực tế trên màn hình di động
-    has_drawn = canvas_result.image_data is not None and (canvas_result.image_data[:, :, 3] > 0).any()
+    function getPos(c, e) { var r = c.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
+    function draw(e) { if(!drawing) return; var p = getPos(canvas, e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+    function saveSig() { var dStr = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data.some(channel => channel !== 0) ? canvas.toDataURL() : ''; window.parent.postMessage({type: 'sig-html5-save', data: dStr}, '*'); }
     
+    canvas.addEventListener("mousedown", function(e){ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); });
+    canvas.addEventListener("mousemove", draw);
+    window.addEventListener("mouseup", function(){ if(drawing){ drawing=false; saveSig(); } });
+    
+    canvas.addEventListener("touchstart", function(e){ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); e.preventDefault(); });
+    canvas.addEventListener("touchmove", function(e){ draw(e); e.preventDefault(); });
+    canvas.addEventListener("touchend", function(){ drawing=false; saveSig(); });
+    
+    document.getElementById("sig-clearBtn").addEventListener("click", function(){ canvas.width=canvas.width; ctx.strokeStyle="#0b1d3a"; ctx.lineWidth=3.5; ctx.lineCap="round"; ctx.lineJoin="round"; window.parent.postMessage({type: 'sig-html5-save', data:''}, '*'); });
+</script>
+"""
+components.html(canvas_html, height=220)
+
+st.markdown("""<script>window.addEventListener('message', function(e) { if(e.data.type === 'sig-html5-save') { const el = window.parent.document.querySelector('input[aria-label="sig_html5_holder"]'); if(el) { el.value = e.data.data; el.dispatchEvent(new Event('input', { bubbles: true })); } } });</script>""", unsafe_allow_html=True)
+sig_base64 = st.text_input("Chuỗi chữ ký:", key="sig_html5_holder", label_visibility="collapsed")
+
+st.write("")
+if st.button("🚀 XÁC NHẬN GỬI HỒ SƠ ĐĂNG KÝ TUYỂN SINH", use_container_width=True):
     if not student_name or not student_dob or not uploaded_file:
-        st.error("❌ Vui lòng nhập đầy đủ thông tin học sinh và đính kèm ảnh thẻ BHYT!")
-    elif not has_drawn:
-        st.error("❌ Phụ huynh vui lòng dùng ngón tay vẽ nét ký vào khung xám trước khi nộp đơn!")
+        st.error("❌ Vui lòng nhập đầy đủ tên học sinh, ngày sinh và đính kèm ảnh thẻ BHYT!")
+    elif not sig_base64 or len(sig_base64) < 150:
+        st.error("❌ Phụ huynh vui lòng dùng ngón tay ký tên vào ô vuông trước khi nộp đơn!")
     else:
         with st.spinner("⏳ Đang tải dữ liệu hồ sơ lên đám mây trường..."):
             try:
@@ -188,12 +197,6 @@ if submit_button:
                 supabase.storage.from_("bhyt_bucket").upload(path=fn, file=uploaded_file.getvalue(), file_options={"content-type": uploaded_file.type})
                 img_url = supabase.storage.from_("bhyt_bucket").get_public_url(fn)
                 
-                # Mã hóa ảnh nét vẽ tay thành chuỗi Base64 truyền an toàn về máy chủ
-                img_raw = Image.fromarray(canvas_result.image_data.astype('uint8'), 'RGBA')
-                buffered = io.BytesIO()
-                img_raw.save(buffered, format="PNG")
-                signature_data = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
-
                 parent_name = father_name if father_name else mother_name
                 insert_data = {
                     "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
@@ -201,7 +204,7 @@ if submit_button:
                     "permanent_address": permanent_address, "current_address": current_address, "parent_name": parent_name,
                     "father_name": father_name, "father_phone": father_phone, "father_job": father_job,
                     "mother_name": mother_name, "mother_phone": mother_phone, "mother_job": mother_job,
-                    "insurance_image": img_url, "parent_signature": signature_data
+                    "insurance_image": img_url, "parent_signature": sig_base64
                 }
                 supabase.table("ho_so_tuyen_sinh").insert(insert_data).execute()
                 st.balloons()
