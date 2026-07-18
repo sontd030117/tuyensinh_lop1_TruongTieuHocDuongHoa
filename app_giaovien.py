@@ -85,7 +85,7 @@ password = st.text_input(
     type="password",
 )
 # ==============================================================================
-# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, HIỂN THỊ BIỂU ĐỒ THỐNG KÊ VÀ XUẤX EXCEL
+# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, HIỂN THỊ BIỂU ĐỒ THỐNG KÊ VÀ XUẤT EXCEL
 # ==============================================================================
 if password == "123456":  
     st.subheader(f"📋 Danh sách hồ sơ phiếu điền trực tuyến từ phụ huynh ({NAM_HOC})")
@@ -149,7 +149,7 @@ if password == "123456":
             with col_view1:
                 st.markdown("**Ảnh thẻ BHYT:**")
                 img_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                img_url = str(img_data_arr[0]).strip() if len(img_data_arr) > 0 else ""
+                img_url = str(img_data_arr).strip() if len(img_data_arr) > 0 else ""
                 
                 if img_url and img_url.startswith("http"):
                     st.image(img_url, caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
@@ -162,14 +162,15 @@ if password == "123456":
                     sig_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
                     p_name_arr = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
                     
-                    # Giải mã giá trị mảng thô (Fix lỗi ['TÔ ĐÌNH SƠN'])
-                    actual_sig = str(sig_data_arr[0]).strip() if len(sig_data_arr) > 0 else ""
-                    actual_name = str(p_name_arr[0]).strip() if len(p_name_arr) > 0 else ""
+                    # Giải mã giá trị mảng thô
+                    actual_sig = str(sig_data_arr).strip() if len(sig_data_arr) > 0 else ""
+                    actual_name = str(p_name_arr).strip() if len(p_name_arr) > 0 else ""
                     
                     if actual_sig and actual_sig != "None" and actual_sig != "nan":
                         st.markdown("<div style='border: 1px dashed #ccc; padding: 15px; width: 380px; text-align: center; background-color: #fff;'>", unsafe_allow_html=True)
-                        st.markdown("<div style='font-weight: bold; font-size: 14px;'>KHÁCH HÀNG YÊU CẦU</div>", unsafe_allow_html=True)
-                        st.markdown("<div style='font-style: italic; color: gray; font-size: 11px;'>(Ký, ghi rõ họ tên)</div>", unsafe_allow_html=True)
+                        # ĐÃ SỬA THEO YÊU CẦU: Đổi tiêu đề chữ ký từ Khách Hàng Yêu Cầu thành Chữ Ký Tự Động
+                        st.markdown("<div style='font-weight: bold; font-size: 14px;'>CHỮ KÝ TỰ ĐỘNG</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='font-style: italic; color: gray; font-size: 11px;'>(Hệ thống ký điện tử)</div>", unsafe_allow_html=True)
                         
                         if actual_sig.startswith("TEXT_SIGNATURE:"):
                             clean_text = actual_sig.replace("TEXT_SIGNATURE:", "")
@@ -186,7 +187,7 @@ if password == "123456":
                 else:
                     st.error("Hệ thống đám mây hiện thiếu cấu trúc lưu trữ trường `parent_signature`.")
 
-        # Xử lý tối ưu giãn rộng cột Excel không lỗi (Fix lỗi column_letter)
+        # Xử lý tối ưu giãn rộng cột Excel không lỗi
         from openpyxl.utils import get_column_letter
         buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
