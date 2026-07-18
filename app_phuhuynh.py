@@ -10,7 +10,6 @@ from supabase import Client, create_client
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
-LINK_PHU_HUYNH = "https://streamlit.app"
 
 try:
     SUPABASE_KEY = st.secrets["supabase_key"]
@@ -28,12 +27,35 @@ st.set_page_config(
     layout="centered"
 )
 
+# ----------------------------------------------------------------------
+# DỮ LIỆU ĐỊA DANH MÔ PHỎNG (Cập nhật địa danh mới sau sáp nhập tại Kiên Giang)
+# ----------------------------------------------------------------------
+DATA_HANH_CHINH = {
+    "Tỉnh Kiên Giang": {
+        "Huyện Kiên Lương": [
+            "Thị trấn Kiên Lương", 
+            "Xã Dương Hòa", 
+            "Xã Hòa Điền", 
+            "Xã Kiên Bình", 
+            "Xã Bình An", 
+            "Xã Bình Trị", 
+            "Xã Hòn Nghệ"
+        ],
+        "Thành phố Rạch Giá": ["Phường Vĩnh Thanh Vân", "Phường Vĩnh Thanh", "Phường Vĩnh Lạc", "Phường An Hòa"],
+        "Thành phố Phú Quốc": ["Phường Dương Đông", "Phường An Thới", "Xã Hàm Ninh", "Xã Dương Tơ"]
+    },
+    "Tỉnh An Giang": {
+        "Thành phố Long Xuyên": ["Phường Mỹ Bình", "Phường Mỹ Long", "Phường Mỹ Phước"],
+        "Thành phố Châu Đốc": ["Phường Châu Phú A", "Phường Châu Phú B", "Phường Núi Sam"]
+    }
+}
+
 st.title(f"📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
 st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
 st.info("💡 Hướng dẫn: Phụ huynh vui lòng điền chính xác thông tin dựa theo Giấy khai sinh bản gốc của học sinh.")
 
 # ==============================================================================
-# PHẦN 1.A: GIAO DIỆN HIỂN THỊ BIỂU MẪU NHẬP LIỆU VÀ CHỮ KÝ TỰ ĐỘNG MỚI
+# PHẦN 1.A: GIAO DIỆN HIỂN THỊ BIỂU MẪU NHẬP LIỆU VÀ CHỮ KÝ TỰ ĐỘNG
 # ==============================================================================
 with st.form("form_tuyen_sinh", clear_on_submit=False):
     
@@ -49,19 +71,49 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         student_pob = st.text_input("Nơi sinh (Ghi rõ Tỉnh hoặc Thành phố):")
 
     st.markdown("#### 🏠 2. Thông tin cư trú của gia đình")
-    permanent_address = st.text_area("Địa chỉ đăng ký thường trú (Ghi theo Sổ hộ khẩu hoặc Thông tin cư trú):")
-    current_address = st.text_area("Địa chỉ chỗ ở hiện nay (Địa chỉ thực tế gia đình đang sinh sống):")
-
-    st.markdown("#### 👨‍👩‍👦 3. Thông tin cha mẹ hoặc Người giám hộ")
-    parent_name = st.text_input("Họ tên người khai đơn này (Bố, mẹ hoặc người nuôi dưỡng hợp pháp):").strip()
+    st.markdown("**📍 Địa chỉ đăng ký thường trú (Theo Sổ hộ khẩu/Thông tin cư trú)**")
+    col_tt1, col_tt2, col_tt3 = st.columns(3)
+    with col_tt1:
+        tt_tinh = st.selectbox("Chọn Tỉnh/Thành", list(DATA_HANH_CHINH.keys()), key="tt_tinh")
+    with col_tt2:
+        tt_huyen = st.selectbox("Chọn Quận/Huyện", list(DATA_HANH_CHINH[tt_tinh].keys()), key="tt_huyen")
+    with col_tt3:
+        tt_xa = st.selectbox("Chọn Xã/Phường", DATA_HANH_CHINH[tt_tinh][tt_huyen], key="tt_xa")
+    tt_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Thường trú):", placeholder="Ví dụ: Số 12, Ấp Tà Săng")
     
-    col3, col4 = st.columns(2)
-    with col3:
-        father_name = st.text_input("Họ và tên của cha:")
-        father_phone = st.text_input("Số điện thoại liên lạc của cha:")
-    with col4:
-        mother_name = st.text_input("Họ và tên của mẹ:")
-        mother_phone = st.text_input("Số điện thoại liên lạc của mẹ:")
+    permanent_address = f"{tt_chi_tiet}, {tt_xa}, {tt_huyen}, {tt_tinh}".strip(", ")
+
+    st.write("")
+    st.markdown("**📍 Địa chỉ chỗ ở hiện nay (Địa chỉ thực tế đang sinh sống)**")
+    
+    trung_dia_chi = st.checkbox("Chỗ ở hiện nay giống với địa chỉ thường trú")
+    
+    if trung_dia_chi:
+        current_address = permanent_address
+        st.info(f"🏠 Hệ thống đã tự ghi nhận: {current_address}")
+    else:
+        col_co1, col_co2, col_co3 = st.columns(3)
+        with col_co1:
+            co_tinh = st.selectbox("Chọn Tỉnh/Thành", list(DATA_HANH_CHINH.keys()), key="co_tinh")
+        with col_co2:
+            co_huyen = st.selectbox("Chọn Quận/Huyện", list(DATA_HANH_CHINH[co_tinh].keys()), key="co_huyen")
+        with col_co3:
+            co_xa = st.selectbox("Chọn Xã/Phường", DATA_HANH_CHINH[co_tinh][co_huyen], key="co_xa")
+        co_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Chỗ ở hiện nay):", placeholder="Ví dụ: Số 45, Khấu Phố Ba Hòn")
+        
+        current_address = f"{co_chi_tiet}, {co_xa}, {co_huyen}, {co_tinh}".strip(", ")
+
+    st.write("")
+    st.markdown("#### 👨‍👩‍👦 3. Thông tin cha mẹ hoặc Người giám hộ")
+    father_name = st.text_input("Họ và tên của cha:").strip()
+    father_phone = st.text_input("Số điện thoại liên lạc của cha:")
+    father_job = st.text_input("Nghề nghiệp của cha (Ví dụ: Công nhân, Làm nông, Giáo viên...):")
+    
+    st.write("---") 
+    
+    mother_name = st.text_input("Họ và tên của mẹ:").strip()
+    mother_phone = st.text_input("Số điện thoại liên lạc của mẹ:")
+    mother_job = st.text_input("Nghề nghiệp của mẹ (Ví dụ: Nội trợ, Kinh doanh tự do, Nhân viên...):")
 
     st.markdown("#### 📷 4. Đính kèm ảnh chụp thẻ BHYT")
     st.caption("Yêu cầu: Phụ huynh sử dụng camera điện thoại chụp thật rõ nét mặt trước của thẻ BHYT.")
@@ -83,7 +135,8 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
             unsafe_allow_html=True
         )
         
-        # Tự động sinh chữ ký nghệ thuật bằng phông viết tay thật Mrs Saint Delafield khi gõ tên ở mục 3
+        parent_name = father_name if father_name else mother_name
+        
         if parent_name:
             st.markdown(
                 f"""
@@ -91,8 +144,8 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
                     @import url('https://googleapis.com');
                     .signature-box {{
                         font-family: 'Mrs Saint Delafield', cursive;
-                        font-size: 58px; /* Cỡ chữ lớn hiển thị nét thanh mảnh sắc sảo */
-                        color: #0b1d3a; /* Màu mực xanh đen giống bút máy thật */
+                        font-size: 58px;
+                        color: #0b1d3a;
                         text-align: center;
                         padding: 5px 15px;
                         border: 1px dashed #bbb;
@@ -109,7 +162,7 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         else:
             st.markdown(
                 "<div style='border: 1px dashed #bbb; padding: 25px; text-align: center; color: gray; background-color: #f8f9fa; font-size: 13px;'>"
-                "Vui lòng điền họ tên người khai đơn ở mục 3 để xuất hiện chữ ký"
+                "Vui lòng điền tên cha hoặc mẹ ở mục 3 để xuất hiện chữ ký"
                 "</div>", 
                 unsafe_allow_html=True
             )
@@ -127,8 +180,6 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
 
     st.markdown("---")
     submit_button = st.form_submit_button("🚀 GỬI HỒ SƠ ĐĂNG KÝ NGAY")
-
-
 # ==============================================================================
 # PHẦN 1.B: LOGIC KIỂM TRA DỮ LIỆU, XỬ LÝ ĐÁM MÂY VÀ LƯU HỒ SƠ
 # ==============================================================================
@@ -137,8 +188,10 @@ if submit_button:
         st.error("❌ Vui lòng nhập đầy đủ Họ và tên học sinh!")
     elif not student_dob:
         st.error("❌ Vui lòng điền Ngày tháng năm sinh của học sinh!")
-    elif not parent_name:
-        st.error("❌ Vui lòng điền Họ tên người khai đơn tại Mục 3 để xác nhận chữ ký!")
+    elif not father_name and not mother_name:
+        st.error("❌ Vui lòng điền Họ tên của cha hoặc mẹ ở Mục 3 để xác nhận chữ ký!")
+    elif not tt_chi_tiet:
+        st.error("❌ Vui lòng điền số nhà, tổ hoặc số ấp cụ thể cho địa chỉ thường trú!")
     elif not uploaded_file:
         st.error("❌ Vui lòng đính kèm ảnh chụp thẻ BHYT của học sinh!")
     else:
@@ -146,7 +199,7 @@ if submit_button:
             try:
                 insurance_image_url = ""
                 
-                # 1. Tải dữ liệu ảnh thẻ BHYT lên Supabase Storage (bhyt_bucket)
+                # 1. Tải dữ liệu ảnh thẻ BHYT lên Supabase Storage
                 file_extension = mimetypes.guess_extension(uploaded_file.type) or ".png"
                 unique_filename = f"{uuid.uuid4()}{file_extension}"
                 file_bytes = uploaded_file.getvalue()
@@ -159,16 +212,19 @@ if submit_button:
                 
                 insurance_image_url = supabase.storage.from_("bhyt_bucket").get_public_url(unique_filename)
 
-                # 2. Đồng bộ hóa gói dữ liệu cấu trúc để chèn vào bảng Database
+                # 2. Đồng bộ hóa dữ liệu để ghi vào bảng Database
                 insert_data = {
                     "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
-                    "student_ethnic": student_ethnic, "student_pob": student_pob, "permanent_address": permanent_address,
-                    "current_address": current_address, "parent_name": parent_name, "father_name": father_name,
-                    "father_phone": father_phone, "mother_name": mother_name, "mother_phone": mother_phone,
+                    "student_ethnic": student_ethnic, "student_pob": student_pob, 
+                    "permanent_address": permanent_address, 
+                    "current_address": current_address, 
+                    "parent_name": parent_name,
+                    "father_name": father_name, "father_phone": father_phone, "father_job": father_job,
+                    "mother_name": mother_name, "mother_phone": mother_phone, "mother_job": mother_job,
                     "insurance_image": insurance_image_url, "parent_signature": signature_data
                 }
 
-                # Thực thi lệnh chèn dòng thông tin lên bảng ho_so_tuyen_sinh trên Supabase
+                # Gửi dữ liệu lên bảng ho_so_tuyen_sinh trên Supabase
                 supabase.table("ho_so_tuyen_sinh").insert(insert_data).execute()
 
                 st.balloons()
