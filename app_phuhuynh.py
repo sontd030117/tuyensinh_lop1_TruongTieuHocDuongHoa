@@ -1,9 +1,12 @@
 import io
 import mimetypes
 import uuid
+import base64
 import pandas as pd
 import streamlit as st
 from supabase import Client, create_client
+from streamlit_canvas import st_canvas  # Thư viện lấy nét vẽ ký tay cảm ứng
+from PIL import Image
 
 # ==============================================================================
 # PHẦN 1: CẤU HÌNH HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY SUPABASE VÀ KHỞI TẠO
@@ -27,9 +30,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# ----------------------------------------------------------------------
-# KHO DỮ LIỆU ĐẦY ĐỦ CÁC TỈNH THÀNH, QUẬN/HUYỆN, XÃ/PHƯỜNG SAU SÁP NHẬP
-# ----------------------------------------------------------------------
+# GIỮ NGUYÊN: Trọn bộ dữ liệu 34 tỉnh thành hành chính sau sáp nhập cấp huyện xã
 DATA_34_TINH_THANH = {
     "Tỉnh Kiên Giang": {
         "Huyện Kiên Lương": ["Thị trấn Kiên Lương", "Xã Dương Hòa", "Xã Hòa Điền", "Xã Kiên Bình", "Xã Bình An", "Xã Bình Trị", "Xã Hòn Nghệ"],
@@ -37,13 +38,17 @@ DATA_34_TINH_THANH = {
         "Thành phố Phú Quốc": ["Phường Dương Đông", "Phường An Thới", "Xã Hàm Ninh", "Xã Dương Tơ", "Xã Gành Dầu", "Xã Cửa Cạn", "Xã Cửa Dương", "Xã Bãi Thơm", "Xã Thổ Châu"],
         "Thành phố Hà Tiên": ["Phường Đông Hồ", "Phường Bình San", "Phường Pháo Đài", "Phường Tô Châu", "Phường Mỹ Đức", "Xã Thuận Yên", "Xã Tiên Hải"],
         "Huyện Hòn Đất": ["Thị trấn Hòn Đất", "Thị trấn Sóc Sơn", "Xã Bình Giang", "Xã Bình Sơn", "Xã Thổ Sơn", "Xã Lình Huỳnh", "Xã Mỹ Lâm", "Xã Mỹ Hiệp Sơn", "Xã Nam Thái Sơn"],
-        "Huyện Châu Thành": ["Thị trấn Minh Lương", "Xã Giục Tượng", "Xã Mong Thọ", "Xã Mong Thọ A", "Xã Mong Thọ B", "Xã Thạnh Lộc", "Xã Vĩnh Hòa Hiệp", "Xã Bình An", "Xã Minh Hòa"]
+        "Huyện Châu Thành": ["Thị trấn Minh Lương", "Xã Giục Tượng", "Xã Mong Thọ", "Xã Mong Thọ A", "Xã Mong Thọ B", "Xã Thạnh Lộc", "Xã Vĩnh Hòa Hiệp", "Xã Bình An", "Xã Minh Hòa"],
+        "Huyện Phú Quốc": ["Thị trấn Dương Đông", "Thị trấn An Thới", "Xã Hàm Ninh", "Xã Dương Tơ", "Xã Cửa Cạn"],
+        "Huyện Giồng Riềng": ["Thị trấn Giồng Riềng", "Xã Thạnh Lộc", "Xã Thạnh Hưng", "Xã Thạnh Phước", "Xã Hùng Vương"],
+        "Huyện Tân Hiệp": ["Thị trấn Tân Hiệp", "Xã Thạnh Đông", "Xã Thạnh Đông A", "Xã Thạnh Đông B", "Xã Tân Hiệp A"]
     },
     "Tỉnh An Giang": {
         "Thành phố Long Xuyên": ["Phường Mỹ Bình", "Phường Mỹ Long", "Phường Mỹ Phước", "Phường Mỹ Quý", "Phường Mỹ Thới", "Phường Mỹ Thạnh", "Phường Bình Đức", "Phường Bình Khánh", "Phường Đông Xuyên"],
         "Thành phố Châu Đốc": ["Phường Châu Phú A", "Phường Châu Phú B", "Phường Núi Sam", "Phường Vĩnh Mỹ", "Phường Tế Hà", "Xã Vĩnh Tế", "Xã Vĩnh Châu"],
         "Thị xã Tân Châu": ["Phường Long Thạnh", "Phường Long Hưng", "Phường Long Châu", "Phường Long Phú", "Phường Long Sơn", "Xã Phú Vĩnh", "Xã Lê Chánh"],
-        "Huyện Chợ Mới": ["Thị trấn Chợ Mới", "Thị trấn Mỹ Luông", "Xã Kiến An", "Xã Kiến Thành", "Xã Mỹ Hội Đông", "Xã Nhơn Mỹ"]
+        "Huyện Chợ Mới": ["Thị trấn Chợ Mới", "Thị trấn Mỹ Luông", "Xã Kiến An", "Xã Kiến Thành", "Xã Mỹ Hội Đông", "Xã Nhơn Mỹ"],
+        "Huyện Phú Tân": ["Thị trấn Phú Mỹ", "Thị trấn Chợ Vàm", "Xã Phú An", "Xã Phú Lâm", "Xã Phú Thạnh", "Xã Tân Trung"]
     },
     "Thành phố Hồ Chí Minh": {
         "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Cô Giang", "Phường Cầu Kho", "Phường Cầu Ông Lãnh", "Phường Nguyễn Thái Bình", "Phường Nguyễn Cư Trinh", "Phường Phạm Ngũ Lão", "Phường Tân Định", "Phường Đa Kao"],
@@ -67,7 +72,7 @@ DATA_34_TINH_THANH = {
         "Thị xã Cửa Lò": ["Phường Nghi Thu", "Phường Nghi Hương", "Phường Thu Thủy", "Phường Nghi Thủy", "Phường Thu Hòa"]
     }
 }
-# Tải tiếp kho bản đồ 34 địa danh phân cấp nối dài vào bộ nhớ
+# Cập nhật nối dài toàn bộ kho dữ liệu địa danh hành chính sau sáp nhập
 DATA_34_TINH_THANH.update({
     "Tỉnh Hà Tĩnh": {
         "Thành phố Hà Tĩnh": ["Phường Bắc Hà", "Phường Nam Ngạn", "Phường Nguyễn Du", "Phường Trần Phú", "Phường Đại Nài", "Phường Thạch Linh"],
@@ -160,10 +165,6 @@ DATA_34_TINH_THANH.update({
         "Thành phố Bến Tre": ["Phường An Hội (Sáp nhập)", "Phường Phú Khương", "Phường Phú Tân"]
     }
 })
-
-st.title(f"📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
-st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
-st.info("💡 Hướng dẫn: Vui lòng chọn địa danh Quê quán và Cư trú ở các ô thả xuống phía dưới. Danh sách Huyện và Xã sẽ tự động lọc tương ứng theo Tỉnh thành thời gian thực.")
 # ----------------------------------------------------------------------
 # KHỐI 1: CHỌN QUÊ QUÁN ĐỘNG (NẰM NGOÀI FORM ĐỂ TỰ ĐỘNG ĐỔI THEO TỈNH CHUẨN XÁC)
 # ----------------------------------------------------------------------
@@ -245,73 +246,43 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
     st.caption("Yêu cầu: Phụ huynh sử dụng camera điện thoại chụp thật rõ nét mặt trước của thẻ BHYT.")
     uploaded_file = st.file_uploader("Nhấn vào đây để chụp ảnh hoặc tải file ảnh lên:", type=["jpg", "jpeg", "png"])
 
-    st.markdown("#### ✍️ 4. Xác nhận và Ký tên điện tử")
-    col_sig_left, col_sig_right = st.columns(2)
+    # NÂNG CẤP CHỮ KÝ: Tích hợp bảng vẽ nét ký tay cảm ứng mực xanh đen toàn diện
+    st.markdown("#### ✍️ 4. Phụ huynh ký tên bằng tay lên khung dưới đây")
+    st.caption("💡 Hướng dẫn: Dùng ngón tay (hoặc bút cảm ứng) vẽ nét ký trực tiếp vào ô màu xám bên dưới.")
     
-    with col_sig_left:
-        st.markdown(
-            """
-            <div style='text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 2px;'>
-                CHỮ KÝ TỰ ĐỘNG
-            </div>
-            <div style='text-align: center; font-style: italic; color: gray; font-size: 12px; margin-bottom: 8px;'>
-                (Hệ thống ký điện tử)
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        
-        parent_name = father_name if father_name else mother_name
-        
-        if parent_name:
-            st.markdown(
-                f"""
-                <style>
-                    @import url('https://googleapis.com');
-                    .signature-box {{
-                        font-family: 'Mrs Saint Delafield', cursive;
-                        font-size: 58px;
-                        color: #0b1d3a;
-                        text-align: center;
-                        padding: 5px 15px;
-                        border: 1px dashed #bbb;
-                        background-color: #f8f9fa;
-                        border-radius: 4px;
-                        line-height: 1.1;
-                    }}
-                </style>
-                <div class="signature-box">{parent_name}</div>
-                """,
-                unsafe_allow_html=True
-            )
-            signature_data = f"TEXT_SIGNATURE:{parent_name}"
-        else:
-            st.markdown("<div style='border: 1px dashed #bbb; padding: 25px; text-align: center; color: gray; background-color: #f8f9fa; font-size: 13px;'>Vui lòng điền tên cha hoặc mẹ phía trên để ký</div>", unsafe_allow_html=True)
-            signature_data = None
-            
-        display_name = parent_name.upper() if parent_name else "..."
-        st.markdown(f"<div style='text-align: center; font-weight: bold; font-size: 14px; margin-top: 8px; text-transform: uppercase;'>{display_name}</div>", unsafe_allow_html=True)
-        
-    with col_sig_right:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.caption("(*) Phụ huynh cam kết các thông tin khai báo trên phiếu điện tử này là hoàn toàn chính xác và trùng khớp giấy tờ gốc.")
+    canvas_result = st_canvas(
+        fill_color="rgba(255, 255, 255, 0)",
+        stroke_width=3,            # Độ thanh đậm sinh động
+        stroke_color="#0b1d3a",     # Mực xanh đen chuẩn văn bản hành chính
+        background_color="#eeeeee", # Ô xám khoanh vùng nhận diện nét vẽ tay
+        height=150,
+        width=340,
+        drawing_mode="freedraw",
+        key="canvas_sig",
+    )
 
     st.markdown("---")
+    st.caption("(*) Phụ huynh cam kết các thông tin khai báo trên phiếu điện tử này là hoàn toàn chính xác.")
     submit_button = st.form_submit_button("🚀 GỬI HỒ SƠ ĐĂNG KÝ NGAY")
 # ==============================================================================
-# PHẦN 1.B: LOGIC KIỂM TRA DỮ LIỆU VÀ ĐỒNG BỘ ĐẨY DỮ LIỆU LÊN SUPABASE
+# PHẦN 1.B: LOGIC KIỂM TRA DỮ LIỆU VÀ ĐỒNG BỘ ĐẨY CHỮ KÝ ẢNH LÊN SUPABASE
 # ==============================================================================
 if submit_button:
+    # Kiểm tra xem phụ huynh đã vẽ nét ký tay cảm ứng vào khung xám chưa
+    has_drawn = canvas_result.image_data is not None and (canvas_result.image_data[:, :, 3] > 0).any()
+    
     if not student_name:
         st.error("❌ Vui lòng nhập đầy đủ Họ và tên học sinh!")
     elif not student_dob:
         st.error("❌ Vui lòng điền Ngày tháng năm sinh của học sinh!")
     elif not father_name and not mother_name:
-        st.error("❌ Vui lòng điền Họ tên của cha hoặc mẹ ở Mục 3 để xác nhận chữ ký!")
+        st.error("❌ Vui lòng điền Họ tên của cha hoặc mẹ ở Mục 2 để xác nhận chữ ký!")
     elif not tt_chi_tiet:
         st.error("❌ Vui lòng điền số nhà, tổ hoặc số ấp cụ thể cho địa chỉ thường trú!")
     elif not uploaded_file:
         st.error("❌ Vui lòng đính kèm ảnh chụp thẻ BHYT của học sinh!")
+    elif not has_drawn:
+        st.error("❌ Phụ huynh vui lòng dùng ngón tay ký tên vào khung màu xám trước khi gửi đơn!")
     else:
         with st.spinner("⏳ Hệ thống đang tải hồ sơ của bạn lên cơ sở dữ liệu đám mây..."):
             try:
@@ -330,7 +301,15 @@ if submit_button:
                 
                 insurance_image_url = supabase.storage.from_("bhyt_bucket").get_public_url(unique_filename)
 
-                # 2. Đồng bộ hóa dữ liệu để ghi vào bảng Database
+                # 2. CHUYỂN NÉT VẼ KÝ TAY THÀNH CHUỖI ẢNH BASE64 ĐỂ TRUYỀN VỀ TRANG QUẢN TRỊ GỐC
+                img_raw = Image.fromarray(canvas_result.image_data.astype('uint8'), 'RGBA')
+                buffered = io.BytesIO()
+                img_raw.save(buffered, format="PNG")
+                signature_data = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
+
+                parent_name = father_name if father_name else mother_name
+
+                # 3. Đồng bộ hóa dữ liệu để ghi vào bảng Database
                 insert_data = {
                     "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
                     "student_ethnic": student_ethnic, "student_pob": student_pob, 
@@ -340,7 +319,7 @@ if submit_button:
                     "parent_name": parent_name,
                     "father_name": father_name, "father_phone": father_phone, "father_job": father_job,
                     "mother_name": mother_name, "mother_phone": mother_phone, "mother_job": mother_job,
-                    "insurance_image": insurance_image_url, "parent_signature": signature_data
+                    "insurance_image": insurance_image_url, "parent_signature": signature_data # Lưu trữ chuỗi ảnh nét vẽ
                 }
 
                 # Gửi dữ liệu lên bảng ho_so_tuyen_sinh trên Supabase
@@ -351,7 +330,7 @@ if submit_button:
                 st.markdown(f"""
                 Kính gửi phụ huynh **{parent_name}**, nhà trường đã tiếp nhận thành công dữ liệu đăng ký tuyển sinh của học sinh **{student_name}**. 
                 
-                Thông tin hồ sơ và chữ ký xác nhận đã được đồng bộ hóa và lưu trữ an toàn trên hệ thống tuyển sinh trực tuyến của nhà trường.
+                Thông tin hồ sơ và nét chữ ký tay cảm ứng đã được đồng bộ hóa và lưu trữ an toàn trên hệ thống tuyển sinh trực tuyến của nhà trường.
                 """)
                 
             except Exception as e:
