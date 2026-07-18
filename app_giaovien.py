@@ -5,7 +5,7 @@ import streamlit as st
 from supabase import Client, create_client
 
 # ==============================================================================
-# CẤU HÌNH BIẾN NĂM HỌC VÀ ĐƯỜNG DẪN KẾT NỐI HỆ THỐNG ĐỒNG BỘ
+# PHẦN 2.1: CẤU HÌNH HỆ THỐNG, SINH MÃ QR VÀ XÁC THỰC BẢO MẬT
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
@@ -31,9 +31,23 @@ st.set_page_config(
 )
 st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương Hòa (Năm học {NAM_HOC})")
 
-# ==============================================================================
-# TỰ ĐỘNG SINH MÃ QR ĐỂ IN ẤN HOẶC GỬI ZALO
-# ==============================================================================
+# Nhúng phông chữ viết tay Google Font vào toàn bộ trang quản trị để hiển thị chữ ký tự động
+st.markdown(
+    """
+    <style>
+        @import url('https://googleapis.com');
+        .digital-sig-text {
+            font-family: 'Dancing Script', cursive;
+            font-size: 36px;
+            color: #1a237e;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
 LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
 
@@ -66,20 +80,19 @@ with col_qr2:
 
 st.write("---")
 
-# ==============================================================================
-# HỆ THỐNG XEM VÀ XUẤT DỮ LIỆU EXCEL BẢO MẬT
-# ==============================================================================
 password = st.text_input(
     "Vui lòng nhập mật khẩu quản trị để xem dữ liệu học sinh:",
     type="password",
 )
-
+# ==============================================================================
+# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, XỬ LÝ HIỂN THỊ CHỮ KÝ ĐỒNG BỘ VÀ XUẤT EXCEL
+# ==============================================================================
 if password == "123456":  
     st.subheader(f"📋 Danh sách hồ sơ phiếu điền trực tuyến từ phụ huynh ({NAM_HOC})")
 
     with st.spinner("Đang kết nối đám mây lấy dữ liệu mới nhất..."):
         try:
-            # ĐÃ CẬP NHẬT: Sửa đổi thành tham số 'desc=True' phù hợp với thư viện phiên bản mới
+            # Sửa đổi thành tham số 'desc=True' phù hợp với thư viện phiên bản mới
             response = (
                 supabase.table("ho_so_tuyen_sinh")
                 .select("*")
@@ -109,30 +122,74 @@ if password == "123456":
             "mother_name": "Họ tên mẹ",
             "mother_phone": "SĐT Mẹ",
             "insurance_image": "Đường dẫn ảnh thẻ BHYT",
+            "parent_signature": "Dữ liệu chữ ký mạng"
         }
 
         available_cols = [col for col in column_mapping.keys() if col in df.columns]
         df_display = df[available_cols].rename(columns=column_mapping)
 
-        st.dataframe(df_display, use_container_width=True)
+        # Ẩn cột chữ ký loằng ngoằng trên bảng chính để giao diện gọn gàng
+        cols_to_show = [c for c in df_display.columns if c != "Dữ liệu chữ ký mạng"]
+        st.dataframe(df_display[cols_to_show], use_container_width=True)
 
-        # Xem nhanh ảnh thẻ BHYT trực quan trên giao diện quản trị
-        if "Đường dẫn ảnh thẻ BHYT" in df_display.columns:
-            st.markdown("### 📷 Tra cứu ảnh thẻ BHYT học sinh")
-            student_list = df_display["Tên học sinh"].unique() if "Tên học sinh" in df_display.columns else []
-            if len(student_list) > 0:
-                selected_student = st.selectbox("Chọn học sinh cần xem ảnh thẻ BHYT:", student_list)
+        st.markdown("### 📷 Tra cứu Minh chứng hồ sơ Học sinh")
+        student_list = df_display["Tên học sinh"].unique() if "Tên học sinh" in df_display.columns else []
+        
+        if len(student_list) > 0:
+            selected_student = st.selectbox("Chọn học sinh cần xem ảnh minh chứng & chữ ký:", student_list)
+            
+            col_view1, col_view2 = st.columns(2)
+            
+            with col_view1:
+                st.markdown("**Ảnh thẻ BHYT:**")
                 img_url = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                if len(img_url) > 0 and pd.notna(img_url) and str(img_url[0]).startswith("http"):
-                    st.image(img_url[0], caption=f"Ảnh thẻ BHYT của học sinh {selected_student}", width=400)
+                if len(img_url) > 0 and pd.notna(img_url[0]) and str(img_url[0]).startswith("http"):
+                    st.image(img_url[0], caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
                 else:
                     st.warning("Học sinh này chưa có ảnh thẻ BHYT hoặc đường dẫn ảnh không hợp lệ.")
+                    
+            with col_view2:
+                st.markdown("**Vùng ký xác nhận của phụ huynh:**")
+                if "Dữ liệu chữ ký mạng" in df_display.columns:
+                    sig_data = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
+                    p_name = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
+                    
+                    if len(sig_data) > 0 and pd.notna(sig_data[0]):
+                        actual_sig = sig_data[0]
+                        actual_name = p_name[0] if len(p_name) > 0 else ""
+                        
+                        # Khởi dựng khung viền mô phỏng đơn giấy giống hình mẫu
+                        st.markdown("<div style='border: 1px dashed #ccc; padding: 15px; width: 380px; text-align: center; background-color: #fff;'>", unsafe_allow_html=True)
+                        st.markdown("<div style='font-weight: bold; font-size: 14px;'>KHÁCH HÀNG YÊU CẦU</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='font-style: italic; color: gray; font-size: 11px;'>(Ký, ghi rõ họ tên)</div>", unsafe_allow_html=True)
+                        
+                        # TRƯỜNG HỢP 2.2.A: Phụ huynh chọn ký tự động bằng font chữ
+                        if str(actual_sig).startswith("TEXT_SIGNATURE:"):
+                            clean_text = str(actual_sig).replace("TEXT_SIGNATURE:", "")
+                            st.markdown(f"<div class='digital-sig-text'>{clean_text}</div>", unsafe_allow_html=True)
+                        
+                        # TRƯỜNG HỢP 2.2.B: Phụ huynh tự vẽ nét ký cảm ứng trực tiếp (Mã Base64)
+                        elif str(actual_sig).startswith("data:image"):
+                            st.image(actual_sig, width=250)
+                            
+                        else:
+                            st.markdown("<br><span style='color:orange;'>Dữ liệu ký không đúng định dạng chuẩn</span><br><br>", unsafe_allow_html=True)
+                            
+                        # Đóng khung và hiển thị tên viết hoa in đậm dưới cùng giống mẫu phiếu gốc
+                        st.markdown(f"<b style='text-transform: uppercase; font-size: 14px;'>{actual_name}</b>", unsafe_allow_html=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        st.warning("Học sinh này chưa thực hiện ký xác nhận.")
+                else:
+                    st.error("Hệ thống đám mây hiện thiếu cấu trúc lưu trữ trường `parent_signature`.")
 
         # Tạo file báo cáo Excel tự động giãn rộng cột dữ liệu
         buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df_display.to_excel(writer, index=False, sheet_name=sheet_name_excel[:31])
+            # Loại bỏ cột chứa chuỗi mã hóa chữ ký thô loằng ngoằng trước khi xuất file excel
+            df_excel = df_display[cols_to_show]
+            df_excel.to_excel(writer, index=False, sheet_name=sheet_name_excel[:31])
             worksheet = writer.sheets[sheet_name_excel[:31]]
             for col in worksheet.columns:
                 max_len = 0
@@ -154,3 +211,5 @@ if password == "123456":
 
 elif password:
     st.error("Mật khẩu truy cập hệ thống không chính xác!")
+else:
+    st.info("🔒 Vui lòng nhập mật khẩu quản trị phía trên để truy cập và quản lý dữ liệu học sinh.")
