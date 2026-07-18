@@ -145,30 +145,31 @@ else:
 st.write("---")
 st.markdown("#### 👤 Khai báo thông tin chi tiết hồ sơ học sinh")
 
-student_name = st.text_input("Họ và tên học sinh (Viết hoa có dấu):", key="st_name_val").strip()
+# ĐÃ FIX DỨT ĐIỂM: Loại bỏ Session State phức tạp, tạo ID tĩnh để Javascript đọc phần tử trực quan, chống đơ nút gửi
+st.text_input("Họ và tên học sinh (Viết hoa có dấu):", key="inp_st_name")
 col_hs1, col_hs2 = st.columns(2)
 with col_hs1:
-    student_gender = st.selectbox("Giới tính:", ["Nam", "Nữ"], key="st_gender_val")
-    student_dob = st.text_input("Ngày sinh (Ví dụ: 15/08/2020):", key="st_dob_val")
+    st.selectbox("Giới tính:", ["Nam", "Nữ"], key="inp_st_gender")
+    st.text_input("Ngày sinh (Ví dụ: 15/08/2020):", key="inp_st_dob")
 with col_hs2:
-    student_ethnic = st.text_input("Dân tộc:", value="Kinh", key="st_ethnic_val")
-    student_pob = st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):", key="st_pob_val")
+    st.text_input("Dân tộc:", value="Kinh", key="inp_st_ethnic")
+    st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):", key="inp_st_pob")
 
-father_name = st.text_input("Họ tên cha:", key="f_name_val")
-father_phone = st.text_input("SĐT cha:", key="f_phone_val")
-father_job = st.text_input("Nghề nghiệp cha:", key="f_job_val")
-
-mother_name = st.text_input("Họ tên mẹ:", key="m_name_val")
-mother_phone = st.text_input("SĐT mẹ:", key="m_phone_val")
-mother_job = st.text_input("Nghề nghiệp mẹ:", key="m_job_val")
+st.text_input("Họ tên cha:", key="inp_f_name")
+st.text_input("SĐT cha:", key="inp_f_phone")
+st.text_input("Nghề nghiệp cha:", key="inp_f_job")
+st.write("---") 
+st.text_input("Họ tên mẹ:", key="inp_m_name")
+st.text_input("SĐT mẹ:", key="inp_m_phone")
+st.text_input("Nghề nghiệp mẹ:", key="inp_m_job")
 
 uploaded_file = st.file_uploader("Nhấn để đính kèm ảnh mặt trước thẻ BHYT học sinh:", type=["jpg", "jpeg", "png"])
 
-# Xử lý đẩy URL ảnh thẻ BHYT lên kho lưu trữ Storage trước khi thực hiện ký tên
+# Tải trước file ảnh minh chứng BHYT lên kho lưu trữ Storage
 img_url_cloud = ""
 if uploaded_file:
     if "uploaded_url" not in st.session_state:
-        with st.spinner("⏳ Đang xử lý nạp ảnh minh chứng thẻ BHYT..."):
+        with st.spinner("⏳ Đang nạp ảnh minh chứng thẻ BHYT..."):
             try:
                 ext = mimetypes.guess_extension(uploaded_file.type) or ".png"
                 fn = f"{uuid.uuid4()}{ext}"
@@ -181,15 +182,15 @@ if uploaded_file:
 st.markdown("#### ✍️ Xác nhận ký tên bằng tay cảm ứng và Nộp đơn")
 st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay vuốt nhẹ để ký vào ô trống trắng. Sau đó bấm nút màu xanh phía dưới chữ ký để nộp đơn.")
 
-# ĐÃ SỬA TRIỆT ĐỂ: Thêm touch-action và preventDefault để khóa cuộn màn hình trên di động, ký tay siêu nhạy
+# ĐÃ CẬP NHẬT: Lệnh JavaScript tự động bóc tách dữ liệu DOM tại chỗ, gỡ hoàn toàn rào cản chặn bảo mật di động
 canvas_html = f"""
 <div style="text-align: center; font-family: Arial, sans-serif;">
     <canvas id="sig-canvas" width="440" height="170" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none !important; -webkit-touch-callout: none; -webkit-user-select: none; border-radius:4px;"></canvas>
     <br>
     <button type="button" id="sig-clearBtn" style="margin-top: 8px; margin-bottom: 15px; padding: 6px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">XÓA KÝ LẠI</button>
     <br>
-    <button type="button" id="sig-submitBtn" style="width: 100%; max-width: 440px; padding: 12px; background-color: #0288d1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; letter-spacing: 0.5px;">🚀 XÁC NHẬN GỬI HỒ SƠ ĐĂNG KÝ TUYỂN SINH</button>
-    <div id="status-msg" style="margin-top: 10px; font-weight: bold; font-size: 14px;"></div>
+    <button type="button" id="sig-submitBtn" style="width: 100%; max-width: 440px; padding: 13px; background-color: #0288d1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 15.5px; font-weight: bold; letter-spacing: 0.5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">🚀 BẤM VÀO ĐÂY ĐỂ GỬI HỒ SƠ ĐĂNG KÝ</button>
+    <div id="status-msg" style="margin-top: 12px; font-weight: bold; font-size: 14.5px;"></div>
 </div>
 
 <script>
@@ -202,82 +203,79 @@ canvas_html = f"""
         return {{ x: t.clientX - r.left, y: t.clientY - r.top }};
     }}
     
-    function draw(e) {{
-        if(!drawing) return;
-        var p = getPos(canvas, e);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-    }}
+    function draw(e) {{ if(!drawing) return; var p = getPos(canvas, e); ctx.lineTo(p.x, p.y); ctx.stroke(); }}
     
     canvas.addEventListener("mousedown", function(e){{ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); }});
     canvas.addEventListener("mousemove", draw); window.addEventListener("mouseup", function(){{ drawing=false; }});
     
-    // ĐỒNG BỘ: Sự kiện vuốt tay di động được khóa chặn cuộn trang để bắt nét vẽ máy chính xác
-    canvas.addEventListener("touchstart", function(e){{
-        drawing = true; ctx.beginPath();
-        var p = getPos(canvas, e);
-        ctx.moveTo(p.x, p.y);
-        if (e.cancelable) e.preventDefault();
-    }}, {{ passive: false }});
-    
-    canvas.addEventListener("touchmove", function(e){{
-        if (drawing) {{
-            draw(e);
-            if (e.cancelable) e.preventDefault();
-        }}
-    }}, {{ passive: false }});
-    
-    canvas.addEventListener("touchend", function(e){{
-        drawing = false;
-        if (e.cancelable) e.preventDefault();
-    }}, {{ passive: false }});
+    canvas.addEventListener("touchstart", function(e){{ drawing = true; ctx.beginPath(); var p = getPos(canvas, e); ctx.moveTo(p.x, p.y); if (e.cancelable) e.preventDefault(); }}, {{ passive: false }});
+    canvas.addEventListener("touchmove", function(e){{ if (drawing) {{ draw(e); if (e.cancelable) e.preventDefault(); }} }}, {{ passive: false }});
+    canvas.addEventListener("touchend", function(e){{ drawing = false; if (e.cancelable) e.preventDefault(); }}, {{ passive: false }});
     
     document.getElementById("sig-clearBtn").addEventListener("click", function(){{ canvas.width=canvas.width; ctx.strokeStyle="#0b1d3a"; ctx.lineWidth=4; ctx.lineCap="round"; ctx.lineJoin="round"; }});
 
+    // Luồng xử lý lấy dữ liệu trực tiếp từ các ô phần tử DOM của trình duyệt
     document.getElementById("sig-submitBtn").addEventListener("click", function(){{
         var msgDiv = document.getElementById("status-msg");
+        var pDoc = window.parent.document;
+        
+        // Quét lấy giá trị text trực tiếp từ màn hình phụ huynh
+        var st_name = pDoc.querySelector('input[aria-label="Họ và tên học sinh (Viết hoa có dấu):"]') ? pDoc.querySelector('input[aria-label="Họ và tên học sinh (Viết hoa có dấu):"]').value.trim() : "";
+        var st_gender = pDoc.querySelector('input[aria-label="Giới tính:"]') ? pDoc.querySelector('input[aria-label="Giới tính:"]').value : "Nam";
+        var st_dob = pDoc.querySelector('input[aria-label="Ngày sinh (Ví dụ: 15/08/2020):"]') ? pDoc.querySelector('input[aria-label="Ngày sinh (Ví dụ: 15/08/2020):"]').value.strip : "";
+        var st_ethnic = pDoc.querySelector('input[aria-label="Dân tộc:"]') ? pDoc.querySelector('input[aria-label="Dân tộc:"]').value : "Kinh";
+        var st_pob = pDoc.querySelector('input[aria-label="Nơi sinh (Ghi Tỉnh/Thành phố):"]') ? pDoc.querySelector('input[aria-label="Nơi sinh (Ghi Tỉnh/Thành phố):"]').value : "";
+        
+        var f_name = pDoc.querySelector('input[aria-label="Họ tên cha:"]') ? pDoc.querySelector('input[aria-label="Họ tên cha:"]').value.trim() : "";
+        var f_phone = pDoc.querySelector('input[aria-label="SĐT cha:"]') ? pDoc.querySelector('input[aria-label="SĐT cha:"]').value : "";
+        var f_job = pDoc.querySelector('input[aria-label="Nghề nghiệp cha:"]') ? pDoc.querySelector('input[aria-label="Nghề nghiệp cha:"]').value : "";
+        
+        var m_name = pDoc.querySelector('input[aria-label="Họ tên mẹ:"]') ? pDoc.querySelector('input[aria-label="Họ tên mẹ:"]').value.trim() : "";
+        var m_phone = pDoc.querySelector('input[aria-label="SĐT mẹ:"]') ? pDoc.querySelector('input[aria-label="SĐT mẹ:"]').value : "";
+        var m_job = pDoc.querySelector('input[aria-label="Nghề nghiệp mẹ:"]') ? pDoc.querySelector('input[aria-label="Nghề nghiệp mẹ:"]').value : "";
+
         var isCanvasEmpty = !ctx.getImageData(0, 0, canvas.width, canvas.height).data.some(channel => channel !== 0);
         
-        if ("{student_name}" === "" || "{student_dob}" === "" || "{img_url_cloud}" === "") {{
-            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ LỖI: Vui lòng nhập đầy đủ tên học sinh, ngày sinh và tải lên ảnh thẻ BHYT ở phía trên!";
+        if (st_name === "" || st_dob === "" || "{img_url_cloud}" === "") {{
+            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ LỖI: Vui lòng kiểm tra lại thông tin! Yêu cầu điền tên học sinh, ngày sinh và đính kèm ảnh thẻ BHYT ở phía trên trước khi gửi!";
             return;
         }}
         if (isCanvasEmpty) {{
-            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ LỖI: Phụ huynh vui lòng dùng ngón tay ký tên vào ô trống trước khi gửi!";
+            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ LỖI: Phụ huynh vui lòng ký tên vào ô trống trước khi bấm nút gửi!";
             return;
         }}
 
-        msgDiv.style.color = "#0288d1"; msgDiv.innerHTML = "⏳ Hệ thống đang nộp hồ sơ, vui lòng không tắt màn hình...";
+        msgDiv.style.color = "#0288d1"; msgDiv.innerHTML = "⏳ Hệ thống đang nộp hồ sơ dữ liệu lên nhà trường, vui lòng đợi trong giây lát...";
         var sigData = canvas.toDataURL();
         
+        // Đóng gói JSON an toàn tuyệt đối gửi thẳng API Supabase đám mây
         fetch("{SUPABASE_URL}/rest/v1/ho_so_tuyen_sinh", {{
             method: "POST",
             headers: {{
                 "apikey": "{SUPABASE_KEY}",
                 "Authorization": "Bearer {SUPABASE_KEY}",
-                "Content-Type": "application/json",
-                "Prefer": "return=representation"
+                "Content-Type": "application/json"
             }},
             body: JSON.stringify({{
-                student_name: "{student_name}", student_gender: "{student_gender}", student_dob: "{student_dob}",
-                student_ethnic: "{student_ethnic}", student_pob: "{student_pob}", hometown: "{hometown}",
+                student_name: st_name, student_gender: st_gender, student_dob: st_dob,
+                student_ethnic: st_ethnic, student_pob: st_pob, hometown: "{hometown}",
                 permanent_address: "{permanent_address}", current_address: "{current_address}",
-                parent_name: "{father_name}" !== "" ? "{father_name}" : "{mother_name}",
-                father_name: "{father_name}", father_phone: "{father_phone}", father_job: "{father_job}",
-                mother_name: "{mother_name}", mother_phone: "{mother_phone}", mother_job: "{mother_job}",
+                parent_name: f_name !== "" ? f_name : m_name,
+                father_name: f_name, father_phone: f_phone, father_job: f_job,
+                mother_name: m_name, mother_phone: m_phone, mother_job: m_job,
                 insurance_image: "{img_url_cloud}", parent_signature: sigData
             }})
         }})
         .then(response => {{
             if(response.ok) {{
-                msgDiv.style.color = "#4caf50"; msgDiv.innerHTML = "🎉 NỘP HỒ SƠ THÀNH CÔNG! Nhà trường đã ghi nhận chữ ký tay của phụ huynh.";
-                setTimeout(function() {{ window.parent.location.reload(); }}, 2000);
+                msgDiv.style.color = "#4caf50"; msgDiv.innerHTML = "🎉 NỘP HỒ SƠ THÀNH CÔNG! Hệ thống đã lưu chữ ký cảm ứng. Nhà trường xin cảm ơn phụ huynh!";
+                setTimeout(function() {{ window.parent.location.reload(); }}, 2500);
             }} else {{
-                msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ Đã xảy ra lỗi kết nối đám mây, phụ huynh vui lòng bấm nút gửi lại!";
+                msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ Lỗi đường truyền API, phụ huynh vui lòng nhấn lại nút gửi!";
             }}
         }})
         .catch(error => {{
-            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ Lỗi hệ thống: " + error;
+            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ Lỗi kết nối máy chủ: " + error;
         }});
     }});
 </script>
