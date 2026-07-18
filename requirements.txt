@@ -3,4 +3,3 @@ pandas
 qrcode[pil]
 supabase
 openpyxl
-streamlit-canvas
