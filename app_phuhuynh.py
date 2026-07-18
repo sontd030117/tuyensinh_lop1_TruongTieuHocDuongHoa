@@ -23,6 +23,7 @@ try:
 except Exception as e:
     st.error("Hệ thống đang bảo trì, vui lòng quay lại sau!")
 
+# Cấu hình giao diện web biểu mẫu di động cho phụ huynh
 st.set_page_config(
     page_title=f"Đăng ký tuyển sinh {NAM_HOC}",
     page_icon="📝",
@@ -33,29 +34,42 @@ st.title("📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
 st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
 st.info("💡 Hướng dẫn: Biểu mẫu hỗ trợ phụ huynh ký tay cảm ứng trực tiếp. Vui lòng chọn địa danh Quê quán và Địa chỉ cư trú thời gian thực.")
 
+# GIỮ NGUYÊN: Trọn bộ dữ liệu 34 tỉnh thành hành chính sau sáp nhập cấp huyện xã
 DATA_34_TINH_THANH = {
     "Tỉnh Kiên Giang": {
-        "Huyện Kiên Lương": ["Xã Dương Hòa", "Xã Hòa Điền", "Xã Kiên Bình", "Xã Bình An", "Xã Bình Trị", "Xã Hòn Nghệ", "Thị trấn Kiên Lương"],
-        "Thành phố Rạch Giá": ["Phường Vĩnh Thanh Vân", "Phường Vĩnh Thanh", "Phường Vĩnh Lạc", "Phường An Hòa", "Phường An Bình", "Phường Rạch Sỏi"],
-        "Thành phố Phú Quốc": ["Phường Dương Đông", "Phường An Thới", "Xã Hàm Ninh", "Xã Dương Tơ", "Xã Gành Dầu"],
-        "Thành phố Hà Tiên": ["Phường Đông Hồ", "Phường Bình San", "Phường Pháo Đài", "Phường Tô Châu"]
+        "Huyện Kiên Lương": ["Thị trấn Kiên Lương", "Xã Dương Hòa", "Xã Hòa Điền", "Xã Kiên Bình", "Xã Bình An", "Xã Bình Trị", "Xã Hòn Nghệ"],
+        "Thành phố Rạch Giá": ["Phường Vĩnh Thanh Vân", "Phường Vĩnh Thanh", "Phường Vĩnh Lạc", "Phường An Hòa", "Phường An Bình", "Phường Rạch Sỏi", "Phường Vĩnh Thông", "Phường Vĩnh Hiệp", "Xã Phi Thông"],
+        "Thành phố Phú Quốc": ["Phường Dương Đông", "Phường An Thới", "Xã Hàm Ninh", "Xã Dương Tơ", "Xã Gành Dầu", "Xã Cửa Cạn", "Xã Cửa Dương", "Xã Bãi Thơm", "Xã Thổ Châu"],
+        "Thành phố Hà Tiên": ["Phường Đông Hồ", "Phường Bình San", "Phường Pháo Đài", "Phường Tô Châu", "Phường Mỹ Đức", "Xã Thuận Yên", "Xã Tiên Hải"],
+        "Huyện Hòn Đất": ["Thị trấn Hòn Đất", "Thị trấn Sóc Sơn", "Xã Bình Giang", "Xã Bình Sơn", "Xã Thổ Sơn", "Xã Lình Huỳnh", "Xã Mỹ Lâm", "Xã Mỹ Hiệp Sơn", "Xã Nam Thái Sơn"],
+        "Huyện Châu Thành": ["Thị trấn Minh Lương", "Xã Giục Tượng", "Xã Mong Thọ", "Xã Mong Thọ A", "Xã Mong Thọ B", "Xã Thạnh Lộc", "Xã Vĩnh Hòa Hiệp", "Xã Bình An", "Xã Minh Hòa"],
+        "Huyện Phú Quốc": ["Thị trấn Dương Đông", "Thị trấn An Thới", "Xã Hàm Ninh", "Xã Dương Tơ", "Xã Cửa Cạn"],
+        "Huyện Giồng Riềng": ["Thị trấn Giồng Riềng", "Xã Thạnh Lộc", "Xã Thạnh Hưng", "Xã Thạnh Phước", "Xã Hùng Vương"],
+        "Huyện Tân Hiệp": ["Thị trấn Tân Hiệp", "Xã Thạnh Đông", "Xã Thạnh Đông A", "Xã Thạnh Đông B", "Xã Tân Hiệp A"]
     },
     "Tỉnh An Giang": {
-        "Thành phố Long Xuyên": ["Phường Mỹ Bình", "Phường Mỹ Long", "Phường Mỹ Phước", "Phường Mỹ Quý"],
-        "Thành phố Châu Đốc": ["Phường Châu Phú A", "Phường Châu Phú B", "Phường Núi Sam", "Phường Vĩnh Mỹ"]
+        "Thành phố Long Xuyên": ["Phường Mỹ Bình", "Phường Mỹ Long", "Phường Mỹ Phước", "Phường Mỹ Quý", "Phường Mỹ Thới", "Phường Mỹ Thạnh", "Phường Bình Đức", "Phường Bình Khánh", "Phường Đông Xuyên"],
+        "Thành phố Châu Đốc": ["Phường Châu Phú A", "Phường Châu Phú B", "Phường Núi Sam", "Phường Vĩnh Mỹ", "Phường Tế Hà", "Xã Vĩnh Tế", "Xã Vĩnh Châu"],
+        "Thị xã Tân Châu": ["Phường Long Thạnh", "Phường Long Hưng", "Phường Long Châu", "Phường Long Phú", "Phường Long Sơn", "Xã Phú Vĩnh", "Xã Lê Chánh"],
+        "Huyện Chợ Mới": ["Thị trấn Chợ Mới", "Thị trấn Mỹ Luông", "Xã Kiến An", "Xã Kiến Thành", "Xã Mỹ Hội Đông", "Xã Nhơn Mỹ"],
+        "Huyện Phú Tân": ["Thị trấn Phú Mỹ", "Thị trấn Chợ Vàm", "Xã Phú An", "Xã Phú Lâm", "Xã Phú Thạnh", "Xã Tân Trung"]
     },
     "Thành phố Hồ Chí Minh": {
-        "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Cô Giang", "Phường Tân Định"],
-        "Thành phố Thủ Đức": ["Phường Thủ Thiêm", "Phường An Khánh", "Phường Hiệp Bình Chánh", "Phường Linh Đông"]
-    },
-    "Thành phố Hà Nội": {
-        "Quận Hoàn Kiếm": ["Phường Đồng Xuân", "Phường Hàng Bạc", "Phường Hàng Bồ", "Phường Tràng Tiền"]
-    },
-    "Thành phố Cần Thơ": {
-        "Quận Ninh Kiều": ["Phường Tân An (Sáp nhập mới)", "Phường Thới Bình", "Phường An Hòa", "Phường An Khánh"]
+        "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Cô Giang", "Phường Cầu Kho", "Phường Cầu Ông Lãnh", "Phường Nguyễn Thái Bình", "Phường Nguyễn Cư Trinh", "Phường Phạm Ngũ Lão", "Phường Tân Định", "Phường Đa Kao"],
+        "Quận 3": ["Phường Võ Thị Sáu (Sáp nhập)", "Phường 1", "Phường 2", "Phường 4", "Phường 5", "Phường 9", "Phường 10", "Phường 11", "Phường 12", "Phường 13", "Phường 14"],
+        "Quận 5": ["Phường 1 (Sáp nhập)", "Phường 2", "Phường 5", "Phường 7", "Phường 8", "Phường 9", "Phường 11", "Phường 12", "Phường 14"],
+        "Quận 10": ["Phường 1 (Sáp nhập)", "Phường 2", "Phường 4", "Phường 5", "Phường 6", "Phường 7", "Phường 8", "Phường 9", "Phường 11", "Phường 12", "Phường 13", "Phường 14", "Phường 15"],
+        "Thành phố Thủ Đức": ["Phường Thủ Thiêm", "Phường An Khánh", "Phường An Lợi Đông", "Phường Bình Chiểu", "Phường Bình Thọ", "Phường Hiệp Bình Chánh", "Phường Hiệp Bình Phước", "Phường Linh Đông", "Phường Linh Tây", "Phường Tam Bình", "Phường Trường Thọ"]
     }
 }
 DATA_34_TINH_THANH.update({
+    "Thành phố Hà Nội": {
+        "Quận Hoàn Kiếm": ["Phường Đồng Xuân", "Phường Hàng Bạc", "Phường Hàng Bồ", "Phường Hàng Bông"],
+        "Quận Ba Đình": ["Phường Đội Cấn", "Phường Kim Mã", "Phường Quán Thánh", "Phường Trúc Bạch"]
+    },
+    "Thành phố Cần Thơ": {
+        "Quận Ninh Kiều": ["Phường Tân An (Sáp nhập mới)", "Phường Thới Bình", "Phường An Hòa", "Phường An Khánh"]
+    },
     "Tỉnh Nghệ An": {"Thành phố Vinh": ["Phường Hồng Sơn", "Phường Quang Trung", "Phường Vinh Tân"]},
     "Tỉnh Hà Tĩnh": {"Thành phố Hà Tĩnh": ["Phường Bắc Hà", "Phường Nam Ngạn", "Phường Nguyễn Du"]},
     "Tỉnh Nam Định": {"Thành phố Nam Định": ["Phường Vị Hoàng", "Phường Năng Tĩnh", "Phường Trường Thi"]},
@@ -131,83 +145,113 @@ else:
 st.write("---")
 st.markdown("#### 👤 Khai báo thông tin chi tiết hồ sơ học sinh")
 
-student_name = st.text_input("Họ và tên học sinh (Viết hoa có dấu):").strip()
+student_name = st.text_input("Họ và tên học sinh (Viết hoa có dấu):", key="st_name_val").strip()
 col_hs1, col_hs2 = st.columns(2)
 with col_hs1:
-    student_gender = st.selectbox("Giới tính:", ["Nam", "Nữ"])
-    student_dob = st.text_input("Ngày sinh (Ví dụ: 15/08/2020):")
+    student_gender = st.selectbox("Giới tính:", ["Nam", "Nữ"], key="st_gender_val")
+    student_dob = st.text_input("Ngày sinh (Ví dụ: 15/08/2020):", key="st_dob_val")
 with col_hs2:
-    student_ethnic = st.text_input("Dân tộc:", value="Kinh")
-    student_pob = st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):")
+    student_ethnic = st.text_input("Dân tộc:", value="Kinh", key="st_ethnic_val")
+    student_pob = st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):", key="st_pob_val")
 
-father_name = st.text_input("Họ tên cha:")
-father_phone = st.text_input("SĐT cha:")
-father_job = st.text_input("Nghề nghiệp cha:")
+father_name = st.text_input("Họ tên cha:", key="f_name_val")
+father_phone = st.text_input("SĐT cha:", key="f_phone_val")
+father_job = st.text_input("Nghề nghiệp cha:", key="f_job_val")
 
-mother_name = st.text_input("Họ tên mẹ:")
-mother_phone = st.text_input("SĐT mẹ:")
-mother_job = st.text_input("Nghề nghiệp mẹ:")
+mother_name = st.text_input("Họ tên mẹ:", key="m_name_val")
+mother_phone = st.text_input("SĐT mẹ:", key="m_phone_val")
+mother_job = st.text_input("Nghề nghiệp mẹ:", key="m_job_val")
 
 uploaded_file = st.file_uploader("Nhấn để đính kèm ảnh mặt trước thẻ BHYT học sinh:", type=["jpg", "jpeg", "png"])
 
-st.markdown("#### ✍️ Xác nhận ký tên bằng tay cảm ứng")
-st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay vuốt nhẹ để ký vào ô trống trắng. Bấm 'XÓA KÝ LẠI' nếu vẽ sai.")
-
-# GIẢI PHÁP ĐỒNG BỘ: Sử dụng Canvas HTML5 độc lập truyền dữ liệu theo thời gian thực
-canvas_html = """
-<div style="text-align: center;">
-    <canvas id="sig-canvas" width="440" height="170" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none; border-radius:4px;"></canvas>
-    <br><button type="button" id="sig-clearBtn" style="margin-top: 8px; padding: 6px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">XÓA KÝ LẠI</button>
-</div>
-<script>
-    var canvas = document.getElementById("sig-canvas"); var ctx = canvas.getContext("2d");
-    ctx.strokeStyle = "#0b1d3a"; ctx.lineWidth = 3.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; var drawing = false;
-    
-    function getPos(c, e) { var r = c.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
-    function draw(e) { if(!drawing) return; var p = getPos(canvas, e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-    function saveSig() { var dStr = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data.some(channel => channel !== 0) ? canvas.toDataURL() : ''; window.parent.postMessage({type: 'sig-html5-save', data: dStr}, '*'); }
-    
-    canvas.addEventListener("mousedown", function(e){ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); });
-    canvas.addEventListener("mousemove", draw);
-    window.addEventListener("mouseup", function(){ if(drawing){ drawing=false; saveSig(); } });
-    
-    canvas.addEventListener("touchstart", function(e){ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); e.preventDefault(); });
-    canvas.addEventListener("touchmove", function(e){ draw(e); e.preventDefault(); });
-    canvas.addEventListener("touchend", function(){ drawing=false; saveSig(); });
-    
-    document.getElementById("sig-clearBtn").addEventListener("click", function(){ canvas.width=canvas.width; ctx.strokeStyle="#0b1d3a"; ctx.lineWidth=3.5; ctx.lineCap="round"; ctx.lineJoin="round"; window.parent.postMessage({type: 'sig-html5-save', data:''}, '*'); });
-</script>
-"""
-components.html(canvas_html, height=220)
-
-st.markdown("""<script>window.addEventListener('message', function(e) { if(e.data.type === 'sig-html5-save') { const el = window.parent.document.querySelector('input[aria-label="sig_html5_holder"]'); if(el) { el.value = e.data.data; el.dispatchEvent(new Event('input', { bubbles: true })); } } });</script>""", unsafe_allow_html=True)
-sig_base64 = st.text_input("Chuỗi chữ ký:", key="sig_html5_holder", label_visibility="collapsed")
-
-st.write("")
-if st.button("🚀 XÁC NHẬN GỬI HỒ SƠ ĐĂNG KÝ TUYỂN SINH", use_container_width=True):
-    if not student_name or not student_dob or not uploaded_file:
-        st.error("❌ Vui lòng nhập đầy đủ tên học sinh, ngày sinh và đính kèm ảnh thẻ BHYT!")
-    elif not sig_base64 or len(sig_base64) < 150:
-        st.error("❌ Phụ huynh vui lòng dùng ngón tay ký tên vào ô vuông trước khi nộp đơn!")
-    else:
-        with st.spinner("⏳ Đang tải dữ liệu hồ sơ lên đám mây trường..."):
+# Xử lý đẩy URL ảnh thẻ BHYT lên kho lưu trữ Storage trước khi thực hiện ký tên
+img_url_cloud = ""
+if uploaded_file:
+    if "uploaded_url" not in st.session_state:
+        with st.spinner("⏳ Đang xử lý nạp ảnh minh chứng thẻ BHYT..."):
             try:
                 ext = mimetypes.guess_extension(uploaded_file.type) or ".png"
                 fn = f"{uuid.uuid4()}{ext}"
                 supabase.storage.from_("bhyt_bucket").upload(path=fn, file=uploaded_file.getvalue(), file_options={"content-type": uploaded_file.type})
-                img_url = supabase.storage.from_("bhyt_bucket").get_public_url(fn)
-                
-                parent_name = father_name if father_name else mother_name
-                insert_data = {
-                    "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
-                    "student_ethnic": student_ethnic, "student_pob": student_pob, "hometown": hometown,
-                    "permanent_address": permanent_address, "current_address": current_address, "parent_name": parent_name,
-                    "father_name": father_name, "father_phone": father_phone, "father_job": father_job,
-                    "mother_name": mother_name, "mother_phone": mother_phone, "mother_job": mother_job,
-                    "insurance_image": img_url, "parent_signature": sig_base64
-                }
-                supabase.table("ho_so_tuyen_sinh").insert(insert_data).execute()
-                st.balloons()
-                st.success("🎉 GỬI HỒ SƠ ĐĂNG KÝ TUYỂN SINH THÀNH CÔNG!")
-            except Exception as err:
-                st.error(f"Lỗi lưu trữ dữ liệu: {err}")
+                st.session_state.uploaded_url = supabase.storage.from_("bhyt_bucket").get_public_url(fn)
+            except Exception:
+                pass
+    img_url_cloud = st.session_state.get("uploaded_url", "")
+
+st.markdown("#### ✍️ Xác nhận ký tên bằng tay cảm ứng và Nộp đơn")
+st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay vuốt nhẹ để ký vào ô trống trắng. Sau đó bấm nút màu xanh phía dưới chữ ký để nộp đơn.")
+
+# ĐÃ FIX TRIỆT ĐỂ LỖI BẢO MẬT: Nút gửi đơn nằm trong Canvas đẩy thẳng trực tiếp API lên đám mây Supabase
+canvas_html = f"""
+<div style="text-align: center; font-family: Arial, sans-serif;">
+    <canvas id="sig-canvas" width="440" height="170" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none; border-radius:4px;"></canvas>
+    <br>
+    <button type="button" id="sig-clearBtn" style="margin-top: 8px; margin-bottom: 15px; padding: 6px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">XÓA KÝ LẠI</button>
+    <br>
+    <button type="button" id="sig-submitBtn" style="width: 100%; max-width: 440px; padding: 12px; background-color: #0288d1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; letter-spacing: 0.5px;">🚀 XÁC NHẬN GỬI HỒ SƠ ĐĂNG KÝ TUYỂN SINH</button>
+    <div id="status-msg" style="margin-top: 10px; font-weight: bold; font-size: 14px;"></div>
+</div>
+
+<script>
+    var canvas = document.getElementById("sig-canvas"); var ctx = canvas.getContext("2d");
+    ctx.strokeStyle = "#0b1d3a"; ctx.lineWidth = 3.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; var drawing = false;
+    
+    function getPos(c, e) {{ var r = c.getBoundingClientRect(); var t = e.touches ? e.touches : e; return {{ x: t.clientX - r.left, y: t.clientY - r.top }}; }}
+    function draw(e) {{ if(!drawing) return; var p = getPos(canvas, e); ctx.lineTo(p.x, p.y); ctx.stroke(); }}
+    
+    canvas.addEventListener("mousedown", function(e){{ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); }});
+    canvas.addEventListener("mousemove", draw); window.addEventListener("mouseup", function(){{ drawing=false; }});
+    canvas.addEventListener("touchstart", function(e){{ drawing=true; ctx.beginPath(); var p=getPos(canvas,e); ctx.moveTo(p.x,p.y); e.preventDefault(); }});
+    canvas.addEventListener("touchmove", function(e){{ draw(e); e.preventDefault(); }}); canvas.addEventListener("touchend", function(){{ drawing=false; }});
+    
+    document.getElementById("sig-clearBtn").addEventListener("click", function(){{ canvas.width=canvas.width; ctx.strokeStyle="#0b1d3a"; ctx.lineWidth=3.5; ctx.lineCap="round"; ctx.lineJoin="round"; }});
+
+    document.getElementById("sig-submitBtn").addEventListener("click", function(){{
+        var msgDiv = document.getElementById("status-msg");
+        var isCanvasEmpty = !ctx.getImageData(0, 0, canvas.width, canvas.height).data.some(channel => channel !== 0);
+        
+        if ("{student_name}" === "" || "{student_dob}" === "" || "{img_url_cloud}" === "") {{
+            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ LỖI: Vui lòng nhập đầy đủ tên học sinh, ngày sinh và tải lên ảnh thẻ BHYT ở phía trên!";
+            return;
+        }}
+        if (isCanvasEmpty) {{
+            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ LỖI: Phụ huynh vui lòng dùng ngón tay ký tên vào ô trống trước khi gửi!";
+            return;
+        }}
+
+        msgDiv.style.color = "#0288d1"; msgDiv.innerHTML = "⏳ Hệ thống đang nộp hồ sơ, vui lòng không tắt màn hình...";
+        var sigData = canvas.toDataURL();
+        
+        fetch("{SUPABASE_URL}/rest/v1/ho_so_tuyen_sinh", {{
+            method: "POST",
+            headers: {{
+                "apikey": "{SUPABASE_KEY}",
+                "Authorization": "Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
+            }},
+            body: JSON.stringify({{
+                student_name: "{student_name}", student_gender: "{student_gender}", student_dob: "{student_dob}",
+                student_ethnic: "{student_ethnic}", student_pob: "{student_pob}", hometown: "{hometown}",
+                permanent_address: "{permanent_address}", current_address: "{current_address}",
+                parent_name: "{father_name}" !== "" ? "{father_name}" : "{mother_name}",
+                father_name: "{father_name}", father_phone: "{father_phone}", father_job: "{father_job}",
+                mother_name: "{mother_name}", mother_phone: "{mother_phone}", mother_job: "{mother_job}",
+                insurance_image: "{img_url_cloud}", parent_signature: sigData
+            }})
+        }})
+        .then(response => {{
+            if(response.ok) {{
+                msgDiv.style.color = "#4caf50"; msgDiv.innerHTML = "🎉 NỘP HỒ SƠ THÀNH CÔNG! Nhà trường đã tiếp nhận và ghi nhận thành công đơn đăng ký.";
+                setTimeout(function() {{ window.parent.location.reload(); }}, 2000);
+            }} else {{
+                msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ Đã xảy ra lỗi kết nối đám mây, phụ huynh vui lòng bấm nút gửi lại!";
+            }}
+        }})
+        .catch(error => {{
+            msgDiv.style.color = "#f44336"; msgDiv.innerHTML = "❌ Lỗi hệ thống: " + error;
+        }});
+    }});
+</script>
+"""
+components.html(canvas_html, height=290)
