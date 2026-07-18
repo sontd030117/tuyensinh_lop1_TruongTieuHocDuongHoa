@@ -10,8 +10,7 @@ from supabase import Client, create_client
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
-# ĐÃ BỔ SUNG: Đường dẫn liên kết trực tuyến chính thức của biểu mẫu phụ huynh
-LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"
+LINK_PHU_HUYNH = "https://streamlit.app"
 
 try:
     SUPABASE_KEY = st.secrets["supabase_key"]
@@ -34,7 +33,7 @@ st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
 st.info("💡 Hướng dẫn: Phụ huynh vui lòng điền chính xác thông tin dựa theo Giấy khai sinh bản gốc của học sinh.")
 
 # ==============================================================================
-# PHẦN 1.A: GIAO DIỆN HIỂN THỊ BIỂU MẪU NHẬP LIỆU VÀ CHỮ KÝ TỰ ĐỘNG
+# PHẦN 1.A: GIAO DIỆN HIỂN THỊ BIỂU MẪU NHẬP LIỆU VÀ CHỮ KÝ TỰ ĐỘNG MỚI
 # ==============================================================================
 with st.form("form_tuyen_sinh", clear_on_submit=False):
     
@@ -75,30 +74,31 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         st.markdown(
             """
             <div style='text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 2px;'>
-                CHỮ KÝ YÊU CẦU
+                CHỮ KÝ TỰ ĐỘNG
             </div>
             <div style='text-align: center; font-style: italic; color: gray; font-size: 12px; margin-bottom: 8px;'>
-                (Chữ ký điện tử hệ thống)
+                (Hệ thống ký điện tử)
             </div>
             """, 
             unsafe_allow_html=True
         )
         
-        # Tự động sinh chữ ký nghệ thuật bằng CSS khi phụ huynh gõ tên ở mục 3
+        # Tự động sinh chữ ký nghệ thuật bằng phông viết tay thật Mrs Saint Delafield khi gõ tên ở mục 3
         if parent_name:
             st.markdown(
                 f"""
                 <style>
                     @import url('https://googleapis.com');
                     .signature-box {{
-                        font-family: 'Dancing Script', cursive;
-                        font-size: 38px;
-                        color: #1a237e;
+                        font-family: 'Mrs Saint Delafield', cursive;
+                        font-size: 58px; /* Cỡ chữ lớn hiển thị nét thanh mảnh sắc sảo */
+                        color: #0b1d3a; /* Màu mực xanh đen giống bút máy thật */
                         text-align: center;
-                        padding: 15px;
+                        padding: 5px 15px;
                         border: 1px dashed #bbb;
                         background-color: #f8f9fa;
                         border-radius: 4px;
+                        line-height: 1.1;
                     }}
                 </style>
                 <div class="signature-box">{parent_name}</div>
@@ -108,8 +108,8 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
             signature_data = f"TEXT_SIGNATURE:{parent_name}"
         else:
             st.markdown(
-                "<div style='border: 1px dashed #bbb; padding: 20px; text-align: center; color: gray; background-color: #f8f9fa; font-size: 13px;'>"
-                "Vui lòng điền họ tên ở mục 3 để xuất hiện chữ ký"
+                "<div style='border: 1px dashed #bbb; padding: 25px; text-align: center; color: gray; background-color: #f8f9fa; font-size: 13px;'>"
+                "Vui lòng điền họ tên người khai đơn ở mục 3 để xuất hiện chữ ký"
                 "</div>", 
                 unsafe_allow_html=True
             )
