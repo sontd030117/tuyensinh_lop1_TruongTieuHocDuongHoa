@@ -3,10 +3,11 @@ import mimetypes
 import uuid
 import pandas as pd
 import streamlit as st
+import requests  # Thư viện tải danh sách 63 tỉnh thành sau sáp nhập trực tuyến
 from supabase import Client, create_client
 
 # ==============================================================================
-# CẤU HÌNH HỆ THỐNG ĐỒNG BỘ
+# CẤU HÌNH HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY SUPABASE
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
@@ -28,34 +29,27 @@ st.set_page_config(
 )
 
 # ----------------------------------------------------------------------
-# DỮ LIỆU ĐỊA DANH MÔ PHỎNG (Cập nhật địa danh mới sau sáp nhập tại Kiên Giang)
+# HÀM TẢI DỮ LIỆU ĐỊA DANH 63 TỈNH THÀNH CHUẨN QUỐC GIA (SAU SÁP NHẬP)
 # ----------------------------------------------------------------------
-DATA_HANH_CHINH = {
-    "Tỉnh Kiên Giang": {
-        "Huyện Kiên Lương": [
-            "Thị trấn Kiên Lương", 
-            "Xã Dương Hòa", 
-            "Xã Hòa Điền", 
-            "Xã Kiên Bình", 
-            "Xã Bình An", 
-            "Xã Bình Trị", 
-            "Xã Hòn Nghệ"
-        ],
-        "Thành phố Rạch Giá": ["Phường Vĩnh Thanh Vân", "Phường Vĩnh Thanh", "Phường Vĩnh Lạc", "Phường An Hòa"],
-        "Thành phố Phú Quốc": ["Phường Dương Đông", "Phường An Thới", "Xã Hàm Ninh", "Xã Dương Tơ"]
-    },
-    "Tỉnh An Giang": {
-        "Thành phố Long Xuyên": ["Phường Mỹ Bình", "Phường Mỹ Long", "Phường Mỹ Phước"],
-        "Thành phố Châu Đốc": ["Phường Châu Phú A", "Phường Châu Phú B", "Phường Núi Sam"]
-    }
-}
+@st.cache_data(ttl=86400)  # Bộ nhớ đệm lưu trữ dữ liệu trong 24 giờ
+def get_vietnam_provinces():
+    try:
+        response = requests.get("https://open-api.vn")
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    return [{"name": "Tỉnh Kiên Giang", "codename": "kien_giang", "districts": [{"name": "Huyện Kiên Lương", "wards": [{"name": "Xã Dương Hòa"}]}]}]
+
+provinces_data = get_vietnam_provinces()
+province_mapping = {p["name"]: p for p in provinces_data}
 
 st.title(f"📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
 st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
 st.info("💡 Hướng dẫn: Phụ huynh vui lòng điền chính xác thông tin dựa theo Giấy khai sinh bản gốc của học sinh.")
 
 # ==============================================================================
-# PHẦN 1.A: GIAO DIỆN HIỂN THỊ BIỂU MẪU NHẬP LIỆU VÀ CHỮ KÝ TỰ ĐỘNG
+# PHẦN INTERACTIVE FORM NHẬP LIỆU BIỂU MẪU ĐIỆN TỬ
 # ==============================================================================
 with st.form("form_tuyen_sinh", clear_on_submit=False):
     
@@ -70,38 +64,47 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         student_ethnic = st.text_input("Dân tộc (Ví dụ: Kinh, Khơ-me, Hoa):", value="Kinh")
         student_pob = st.text_input("Nơi sinh (Ghi rõ Tỉnh hoặc Thành phố):")
 
-    # ----------------------------------------------------------------------
-    # ĐÃ BỔ SUNG: CHỌN QUÊ QUÁN TỰ ĐỘNG THEO CẤP HÀNH CHÍNH MỚI SÁP NHẬP
-    # ----------------------------------------------------------------------
+    # CHỌN QUÊ QUÁN ĐẦY ĐỦ TỈNH THÀNH (ĐỊA DANH SAU SÁP NHẬP)
     st.markdown("**📍 Quê quán của học sinh (Ghi theo Giấy khai sinh bản gốc)**")
     col_qq1, col_qq2, col_qq3 = st.columns(3)
     with col_qq1:
-        qq_tinh = st.selectbox("Chọn Tỉnh/Thành (Quê quán)", list(DATA_HANH_CHINH.keys()), key="qq_tinh")
-    with col_qq2:
-        qq_huyen = st.selectbox("Chọn Quận/Huyện (Quê quán)", list(DATA_HANH_CHINH[qq_tinh].keys()), key="qq_huyen")
-    with col_qq3:
-        qq_xa = st.selectbox("Chọn Xã/Phường (Quê quán)", DATA_HANH_CHINH[qq_tinh][qq_huyen], key="qq_xa")
+        qq_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(province_mapping.keys()), key="qq_tinh")
     
-    # Gộp chuỗi thông tin quê quán
-    hometown = f"{qq_xa}, {qq_huyen}, {qq_tinh}"
-
+    qq_districts = province_mapping[qq_tinh_sel]["districts"]
+    qq_district_mapping = {d["name"]: d for d in qq_districts}
+    with col_qq2:
+        qq_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(qq_district_mapping.keys()), key="qq_huyen")
+    
+    qq_wards = qq_district_mapping[qq_huyen_sel]["wards"]
+    qq_ward_names = [w["name"] for w in qq_wards] if qq_wards else ["Chưa phân loại xã"]
+    with col_qq3:
+        qq_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", qq_ward_names, key="qq_xa")
+        
+    hometown = f"{qq_xa_sel}, {qq_huyen_sel}, {qq_tinh_sel}"
+    # ----------------------------------------------------------------------
+    # ĐỊA CHỈ THƯỜNG TRÚ ĐẦY ĐỦ 63 TỈNH THÀNH THEO PHÂN CẤP HÀNH CHÍNH
     # ----------------------------------------------------------------------
     st.markdown("#### 🏠 2. Thông tin cư trú của gia đình")
     st.markdown("**📍 Địa chỉ đăng ký thường trú (Theo Sổ hộ khẩu/Thông tin cư trú)**")
     col_tt1, col_tt2, col_tt3 = st.columns(3)
     with col_tt1:
-        tt_tinh = st.selectbox("Chọn Tỉnh/Thành", list(DATA_HANH_CHINH.keys()), key="tt_tinh")
+        tt_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(province_mapping.keys()), key="tt_tinh")
+        
+    tt_districts = province_mapping[tt_tinh_sel]["districts"]
+    tt_district_mapping = {d["name"]: d for d in tt_districts}
     with col_tt2:
-        tt_huyen = st.selectbox("Chọn Quận/Huyện", list(DATA_HANH_CHINH[tt_tinh].keys()), key="tt_huyen")
+        tt_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(tt_district_mapping.keys()), key="tt_huyen")
+        
+    tt_wards = tt_district_mapping[tt_huyen_sel]["wards"]
+    tt_ward_names = [w["name"] for w in tt_wards] if tt_wards else ["Chưa phân loại xã"]
     with col_tt3:
-        tt_xa = st.selectbox("Chọn Xã/Phường", DATA_HANH_CHINH[tt_tinh][tt_huyen], key="tt_xa")
+        tt_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", tt_ward_names, key="tt_xa")
+        
     tt_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Thường trú):", placeholder="Ví dụ: Số 12, Ấp Tà Săng")
-    
-    permanent_address = f"{tt_chi_tiet}, {tt_xa}, {tt_huyen}, {tt_tinh}".strip(", ")
+    permanent_address = f"{tt_chi_tiet}, {tt_xa_sel}, {tt_huyen_sel}, {tt_tinh_sel}".strip(", ")
 
     st.write("")
     st.markdown("**📍 Địa chỉ chỗ ở hiện nay (Địa chỉ thực tế đang sinh sống)**")
-    
     trung_dia_chi = st.checkbox("Chỗ ở hiện nay giống với địa chỉ thường trú")
     
     if trung_dia_chi:
@@ -110,14 +113,20 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
     else:
         col_co1, col_co2, col_co3 = st.columns(3)
         with col_co1:
-            co_tinh = st.selectbox("Chọn Tỉnh/Thành", list(DATA_HANH_CHINH.keys()), key="co_tinh")
+            co_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(province_mapping.keys()), key="co_tinh")
+            
+        co_districts = province_mapping[co_tinh_sel]["districts"]
+        co_district_mapping = {d["name"]: d for d in co_districts}
         with col_co2:
-            co_huyen = st.selectbox("Chọn Quận/Huyện", list(DATA_HANH_CHINH[co_tinh].keys()), key="co_huyen")
+            co_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(co_district_mapping.keys()), key="co_huyen")
+            
+        co_wards = co_district_mapping[co_huyen_sel]["wards"]
+        co_ward_names = [w["name"] for w in co_wards] if co_wards else ["Chưa phân loại xã"]
         with col_co3:
-            co_xa = st.selectbox("Chọn Xã/Phường", DATA_HANH_CHINH[co_tinh][co_huyen], key="co_xa")
+            co_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", co_ward_names, key="co_xa")
+            
         co_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Chỗ ở hiện nay):", placeholder="Ví dụ: Số 45, Khấu Phố Ba Hòn")
-        
-        current_address = f"{co_chi_tiet}, {co_xa}, {co_huyen}, {co_tinh}".strip(", ")
+        current_address = f"{co_chi_tiet}, {co_xa_sel}, {co_huyen_sel}, {co_tinh_sel}".strip(", ")
 
     st.write("")
     st.markdown("#### 👨‍👩‍👦 3. Thông tin cha mẹ hoặc Người giám hộ")
@@ -197,7 +206,7 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
     st.markdown("---")
     submit_button = st.form_submit_button("🚀 GỬI HỒ SƠ ĐĂNG KÝ NGAY")
 # ==============================================================================
-# PHẦN 1.B: LOGIC KIỂM TRA DỮ LIỆU, XỬ LÝ ĐÁM MÂY VÀ LƯU HỒ SƠ
+# PHẦN 1.B: LOGIC KIỂM TRA DỮ LIỆU VÀ ĐỒNG BỘ ĐẨY DỮ LIỆU LÊN SUPABASE
 # ==============================================================================
 if submit_button:
     if not student_name:
@@ -215,7 +224,7 @@ if submit_button:
             try:
                 insurance_image_url = ""
                 
-                # 1. Tải dữ liệu ảnh thẻ BHYT lên Supabase Storage
+                # 1. Tải dữ liệu ảnh thẻ BHYT lên Supabase Storage (bhyt_bucket)
                 file_extension = mimetypes.guess_extension(uploaded_file.type) or ".png"
                 unique_filename = f"{uuid.uuid4()}{file_extension}"
                 file_bytes = uploaded_file.getvalue()
@@ -228,11 +237,11 @@ if submit_button:
                 
                 insurance_image_url = supabase.storage.from_("bhyt_bucket").get_public_url(unique_filename)
 
-                # 2. Đồng bộ hóa dữ liệu để ghi vào bảng Database
+                # 2. Đồng bộ hóa gói dữ liệu cấu trúc để chèn vào bảng Database
                 insert_data = {
                     "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
                     "student_ethnic": student_ethnic, "student_pob": student_pob, 
-                    "hometown": hometown, # ĐÃ BỔ SUNG: Đồng bộ đẩy dữ liệu quê quán lên mây
+                    "hometown": hometown, 
                     "permanent_address": permanent_address, 
                     "current_address": current_address, 
                     "parent_name": parent_name,
@@ -241,7 +250,7 @@ if submit_button:
                     "insurance_image": insurance_image_url, "parent_signature": signature_data
                 }
 
-                # Gửi dữ liệu lên bảng ho_so_tuyen_sinh trên Supabase
+                # Thực thi lệnh chèn dòng thông tin lên bảng ho_so_tuyen_sinh trên Supabase
                 supabase.table("ho_so_tuyen_sinh").insert(insert_data).execute()
 
                 st.balloons()
