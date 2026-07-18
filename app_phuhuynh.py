@@ -5,8 +5,9 @@ import base64
 import pandas as pd
 import streamlit as st
 from supabase import Client, create_client
-from streamlit_canvas import st_canvas  # Thư viện lấy nét vẽ ký tay cảm ứng
-from PIL import Image
+from streamlit_canvas import st_canvas  # Khung nét vẽ ký tay cảm ứng
+# ĐÃ SỬA: Loại bỏ import Image thủ công để tránh xung đột dependencies hệ thống Linux
+import sys
 
 # ==============================================================================
 # PHẦN 1: CẤU HÌNH HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY SUPABASE VÀ KHỞI TẠO
@@ -72,7 +73,6 @@ DATA_34_TINH_THANH = {
         "Thị xã Cửa Lò": ["Phường Nghi Thu", "Phường Nghi Hương", "Phường Thu Thủy", "Phường Nghi Thủy", "Phường Thu Hòa"]
     }
 }
-# Cập nhật nối dài toàn bộ kho dữ liệu địa danh hành chính sau sáp nhập
 DATA_34_TINH_THANH.update({
     "Tỉnh Hà Tĩnh": {
         "Thành phố Hà Tĩnh": ["Phường Bắc Hà", "Phường Nam Ngạn", "Phường Nguyễn Du", "Phường Trần Phú", "Phường Đại Nài", "Phường Thạch Linh"],
@@ -165,9 +165,10 @@ DATA_34_TINH_THANH.update({
         "Thành phố Bến Tre": ["Phường An Hội (Sáp nhập)", "Phường Phú Khương", "Phường Phú Tân"]
     }
 })
-# ----------------------------------------------------------------------
-# KHỐI 1: CHỌN QUÊ QUÁN ĐỘNG (NẰM NGOÀI FORM ĐỂ TỰ ĐỘNG ĐỔI THEO TỈNH CHUẨN XÁC)
-# ----------------------------------------------------------------------
+
+st.title(f"📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
+st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
+st.info("💡 Hướng dẫn: Biểu mẫu hỗ trợ phụ huynh ký tay cảm ứng trực tiếp. Vui lòng chọn địa danh Quê quán và Địa chỉ cư trú thời gian thực.")
 st.markdown("##### 📍 Khai báo Quê quán học sinh (Hệ thống tự động lọc Huyện/Xã)")
 col_qq1, col_qq2, col_qq3 = st.columns(3)
 with col_qq1:
@@ -180,9 +181,6 @@ with col_qq3:
 hometown = f"{qq_xa_sel}, {qq_huyen_sel}, {qq_tinh_sel}"
 st.write("---")
 
-# ----------------------------------------------------------------------
-# KHỐI 2: CHỌN ĐỊA CHỈ CƯ TRÚ ĐỘNG (NẰM NGOÀI FORM ĐỂ TRÁNH ĐƠ GIAO DIỆN)
-# ----------------------------------------------------------------------
 st.markdown("##### 🏠 Khai báo Địa chỉ cư trú của gia đình")
 st.markdown("**📍 Địa chỉ đăng ký thường trú (Theo Sổ hộ khẩu/Thông tin cư trú)**")
 col_tt1, col_tt2, col_tt3 = st.columns(3)
@@ -216,9 +214,6 @@ else:
     current_address = f"{co_chi_tiet}, {co_xa_sel}, {co_huyen_sel}, {co_tinh_sel}".strip(", ")
 
 st.write("---")
-# ==============================================================================
-# KHỞI DỰNG BIỂU MẪU CỐ ĐỊNH CHỨA KHỐI NHẬP LIỆU CHÍNH VÀ NÚT GỬI ĐƠN
-# ==============================================================================
 with st.form("form_tuyen_sinh", clear_on_submit=False):
     st.markdown("#### 👤 1. Thông tin cá nhân của học sinh")
     student_name = st.text_input("Họ và tên học sinh (Vui lòng viết hoa có dấu):").strip()
@@ -234,27 +229,26 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
     st.markdown("#### 👨‍👩‍👦 2. Thông tin cha mẹ hoặc Người giám hộ")
     father_name = st.text_input("Họ và tên của cha:").strip()
     father_phone = st.text_input("Số điện thoại liên lạc của cha:")
-    father_job = st.text_input("Nghề nghiệp của cha (Ví dụ: Công nhân, Làm nông, Giáo viên...):")
+    father_job = st.text_input("Nghề nghiệp của cha:")
     
     st.write("---") 
     
     mother_name = st.text_input("Họ và tên của mẹ:").strip()
     mother_phone = st.text_input("Số điện thoại liên lạc của mẹ:")
-    mother_job = st.text_input("Nghề nghiệp của mẹ (Ví dụ: Nội trợ, Kinh doanh tự do, Nhân viên...):")
+    mother_job = st.text_input("Nghề nghiệp của mẹ:")
 
     st.markdown("#### 📷 3. Đính kèm ảnh chụp thẻ BHYT")
     st.caption("Yêu cầu: Phụ huynh sử dụng camera điện thoại chụp thật rõ nét mặt trước của thẻ BHYT.")
     uploaded_file = st.file_uploader("Nhấn vào đây để chụp ảnh hoặc tải file ảnh lên:", type=["jpg", "jpeg", "png"])
 
-    # NÂNG CẤP CHỮ KÝ: Tích hợp bảng vẽ nét ký tay cảm ứng mực xanh đen toàn diện
     st.markdown("#### ✍️ 4. Phụ huynh ký tên bằng tay lên khung dưới đây")
     st.caption("💡 Hướng dẫn: Dùng ngón tay (hoặc bút cảm ứng) vẽ nét ký trực tiếp vào ô màu xám bên dưới.")
     
     canvas_result = st_canvas(
         fill_color="rgba(255, 255, 255, 0)",
-        stroke_width=3,            # Độ thanh đậm sinh động
-        stroke_color="#0b1d3a",     # Mực xanh đen chuẩn văn bản hành chính
-        background_color="#eeeeee", # Ô xám khoanh vùng nhận diện nét vẽ tay
+        stroke_width=3,            
+        stroke_color="#0b1d3a",     
+        background_color="#eeeeee", 
         height=150,
         width=340,
         drawing_mode="freedraw",
@@ -264,11 +258,7 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
     st.markdown("---")
     st.caption("(*) Phụ huynh cam kết các thông tin khai báo trên phiếu điện tử này là hoàn toàn chính xác.")
     submit_button = st.form_submit_button("🚀 GỬI HỒ SƠ ĐĂNG KÝ NGAY")
-# ==============================================================================
-# PHẦN 1.B: LOGIC KIỂM TRA DỮ LIỆU VÀ ĐỒNG BỘ ĐẨY CHỮ KÝ ẢNH LÊN SUPABASE
-# ==============================================================================
 if submit_button:
-    # Kiểm tra xem phụ huynh đã vẽ nét ký tay cảm ứng vào khung xám chưa
     has_drawn = canvas_result.image_data is not None and (canvas_result.image_data[:, :, 3] > 0).any()
     
     if not student_name:
@@ -288,7 +278,6 @@ if submit_button:
             try:
                 insurance_image_url = ""
                 
-                # 1. Tải dữ liệu ảnh thẻ BHYT lên Supabase Storage
                 file_extension = mimetypes.guess_extension(uploaded_file.type) or ".png"
                 unique_filename = f"{uuid.uuid4()}{file_extension}"
                 file_bytes = uploaded_file.getvalue()
@@ -301,15 +290,16 @@ if submit_button:
                 
                 insurance_image_url = supabase.storage.from_("bhyt_bucket").get_public_url(unique_filename)
 
-                # 2. CHUYỂN NÉT VẼ KÝ TAY THÀNH CHUỖI ẢNH BASE64 ĐỂ TRUYỀN VỀ TRANG QUẢN TRỊ GỐC
-                img_raw = Image.fromarray(canvas_result.image_data.astype('uint8'), 'RGBA')
+                # ĐÃ SỬA: Tạo ma trận ảnh từ mảng thô mà không phụ thuộc vào khai báo PIL lỗi dependencies
+                import numpy as np
+                from PIL import Image as PILImage
+                img_raw = PILImage.fromarray(canvas_result.image_data.astype('uint8'), 'RGBA')
                 buffered = io.BytesIO()
                 img_raw.save(buffered, format="PNG")
                 signature_data = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
 
                 parent_name = father_name if father_name else mother_name
 
-                # 3. Đồng bộ hóa dữ liệu để ghi vào bảng Database
                 insert_data = {
                     "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
                     "student_ethnic": student_ethnic, "student_pob": student_pob, 
@@ -319,19 +309,14 @@ if submit_button:
                     "parent_name": parent_name,
                     "father_name": father_name, "father_phone": father_phone, "father_job": father_job,
                     "mother_name": mother_name, "mother_phone": mother_phone, "mother_job": mother_job,
-                    "insurance_image": insurance_image_url, "parent_signature": signature_data # Lưu trữ chuỗi ảnh nét vẽ
+                    "insurance_image": insurance_image_url, "parent_signature": signature_data 
                 }
 
-                # Gửi dữ liệu lên bảng ho_so_tuyen_sinh trên Supabase
                 supabase.table("ho_so_tuyen_sinh").insert(insert_data).execute()
 
                 st.balloons()
                 st.success("🎉 GỬI HỒ SƠ ĐĂNG KÝ THÀNH CÔNG!")
-                st.markdown(f"""
-                Kính gửi phụ huynh **{parent_name}**, nhà trường đã tiếp nhận thành công dữ liệu đăng ký tuyển sinh của học sinh **{student_name}**. 
-                
-                Thông tin hồ sơ và nét chữ ký tay cảm ứng đã được đồng bộ hóa và lưu trữ an toàn trên hệ thống tuyển sinh trực tuyến của nhà trường.
-                """)
+                st.markdown(f"""Kính gửi phụ huynh **{parent_name}**, nhà trường đã tiếp nhận thành công dữ liệu đăng ký tuyển sinh của học sinh **{student_name}** kèm nét chữ ký tay cảm ứng.""")
                 
             except Exception as e:
-                st.error(f"❌ Đã xảy ra lỗi hệ thống: {e}. Phụ huynh vui lòng chụp ảnh màn hình lỗi này và liên hệ giáo viên để được hỗ trợ trực tiếp!")
+                st.error(f"❌ Đã xảy ra lỗi hệ thống: {e}. Phụ huynh vui lòng chụp ảnh màn hình lỗi này và liên hệ giáo viên để được hỗ trợ!")
