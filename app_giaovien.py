@@ -1,11 +1,8 @@
 import io
-import re
-import base64
 import pandas as pd
 import qrcode
 import streamlit as st
 from supabase import Client, create_client
-from fpdf import FPDF
 
 # ==============================================================================
 # PHẦN 2.1: CẤU HÌNH HỆ THỐNG VÀ TIÊU ĐỀ QUẢN TRỊ VIÊN
@@ -20,17 +17,29 @@ st.set_page_config(
 )
 st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương Hòa (Năm học {NAM_HOC})")
 
-def get_clean_base64(data_str):
-    """Hàm bóc tách dọn sạch tiền tố data:image/png;base64 thừa để đưa về mảng bytes ảnh chuẩn"""
-    if "base64," in data_str:
-        return data_str.split("base64,")[-1].strip()
-    return data_str.strip()
+st.markdown(
+    """
+    <style>
+        @import url('https://googleapis.com');
+        .digital-sig-text {
+            font-family: 'Mrs Saint Delafield', cursive;
+            font-size: 55px;
+            color: #0b1d3a;
+            text-align: center;
+            padding: 5px;
+            line-height: 1.1;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
 LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
 
 col_qr1, col_qr2 = st.columns(2)
 
 with col_qr1:
+    # Ép cấu hình qrcode giữ nguyên 100% định dạng chữ thường để quét không bị lỗi 404
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -126,7 +135,7 @@ if password == "123456":
         cols_to_show = [c for c in df_display.columns if c != "Dữ liệu chữ ký mạng"]
         st.dataframe(df_display[cols_to_show], use_container_width=True)
 
-        # KHỐI CHỨC NĂNG XÓA HỒ SƠ LỖI DO PHỤ HUYNH NHẬP SAI
+        # KHỐI CHỨC NĂNG XÓA HỒ SƠ LỖI DO PHUYNH NHẬP SAI
         st.markdown("### 🗑️ Quản lý xóa hồ sơ nhập sai")
         col_del1, col_del2 = st.columns(2)
         with col_del1:
@@ -135,7 +144,7 @@ if password == "123456":
             st.write("<br>", unsafe_allow_html=True)
             if st.button("❌ XÓA HỒ SƠ NÀY", use_container_width=True, type="primary"):
                 if not df[df["student_name"] == student_to_delete].empty:
-                    row_to_del = df[df["student_name"] == student_to_delete].iloc[0]
+                    row_to_del = df[df["student_name"] == student_to_delete].iloc
                     record_id = row_to_del.get("id")
                     img_path_raw = str(row_to_del.get("insurance_image", ""))
                     
@@ -156,80 +165,35 @@ if password == "123456":
         
         if len(student_list) > 0:
             selected_student = st.selectbox("Chọn học sinh cần kiểm tra & in ấn hồ sơ:", student_list)
-            matched_data = df[df["student_name"] == selected_student]
             
+            matched_data = df[df["student_name"] == selected_student]
             if not matched_data.empty:
-                student_row = matched_data.iloc[0].to_dict()
+                student_row = matched_data.iloc.to_dict()
                 
                 img_url = str(student_row.get("insurance_image", "")).strip()
                 raw_sig = str(student_row.get("parent_signature", "")).strip()
                 actual_name = str(student_row.get("parent_name", "")).strip()
-                clean_sig = get_clean_base64(raw_sig)
+                clean_sig = raw_sig.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
                 
                 st.write("")
                 st.markdown("**📄 Bản mô phỏng xem trước tờ đơn đăng ký (Khổ giấy chuẩn hành chính):**")
                 
-                # Biểu mẫu hiển thị tại chỗ cho giáo viên đọc tra cứu dữ liệu ngay ngắn
-                html_top = f"""<div style="background-color: #f0f2f6; padding: 20px; display: flex; justify-content: center;"><div id="print-area" style="width: 790px; padding: 40px 50px; background-color: white; color: black; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 4px; font-family: 'Times New Roman', Times, serif; font-size: 15.5px; line-height: 1.7;"><div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 2px;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập - Tự do - Hạnh phúc</div><div style="text-align: center; margin-bottom: 20px; letter-spacing: 2px; font-weight: bold;">---------------</div><div style="text-align: center; font-weight: bold; font-size: 17px; margin-bottom: 3px;">ĐƠN ĐĂNG KÝ DỰ TUYỂN SINH VÀO LỚP 1</div><div style="text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 20px;">Năm học: {NAM_HOC}</div><div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 25px;">Kính gửi: Hiệu trưởng Trường Tiểu học Dương Hòa</div>"""
-                html_body = f"""<div style="text-align: justify; font-family: 'Times New Roman';">- Tôi tên: <b>{str(student_row.get('parent_name',''))}</b> - Chỗ ở hiện nay: {str(student_row.get('current_address',''))}<br>- Là phụ huynh em: <b>{str(student_row.get('student_name','')).upper()}</b> - Giới tính: {str(student_row.get('student_gender',''))} - Dân tộc: {str(student_row.get('student_ethnic',''))}<br>- Sinh ngày: <b>{str(student_row.get('student_dob',''))}</b> - Nơi sinh: {str(student_row.get('student_pob',''))}<br>- Địa chỉ thường trú: {str(student_row.get('permanent_address',''))}<br>- Quê quán học sinh: {str(student_row.get('hometown',''))}<br>- Họ tên cha: {str(student_row.get('father_name',''))} - SĐT cha: {str(student_row.get('father_phone',''))}<br>- Họ tên mẹ: {str(student_row.get('mother_name',''))} - SĐT mẹ: {str(student_row.get('mother_phone',''))}</div>"""
-                html_footer = f"""<table style="width: 100%; margin-top: 20px;"><tr><td>[✓] Bản sao khai sinh<br>[✓] Số định danh<br>{'[✓]' if img_url.startswith('http') else '[ ]'} Thẻ BHYT</td><td style="text-align:center;">Dương Hòa, ngày.....tháng.....năm 2026<br><b>CHỮ KÝ PHỤ HUYNH</b><br><br><img src="data:image/png;base64,{clean_sig}" width="150" style="mix-blend-mode:multiply;"><br><b>{actual_name}</b></td></tr></table></div></div>"""
+                html_top = f"""<div style="background-color: #f0f2f6; padding: 20px; display: flex; justify-content: center;"><div id="print-area" style="width: 790px; min-height: 1050px; padding: 40px 50px; background-color: white; color: black; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 4px; font-family: 'Times New Roman', Times, serif; font-size: 15.5px; line-height: 1.7;"><div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 2px;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập - Tự do - Hạnh phúc</div><div style="text-align: center; margin-bottom: 20px; letter-spacing: 2px; font-weight: bold;">---------------</div><div style="text-align: center; font-weight: bold; font-size: 17px; margin-bottom: 3px;">ĐƠN ĐĂNG KÝ DỰ TUYỂN SINH VÀO LỚP 1</div><div style="text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 20px;">Năm học: {NAM_HOC}</div><div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 25px;">Kính gửi: Hiệu trưởng Trường Tiểu học Dương Hòa</div>"""
+                html_body = f"""<div style="text-align: justify; font-family: 'Times New Roman', Times, serif;"><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Tôi tên: <span style="font-weight: bold; color: #1a237e; font-size: 16px; padding: 0 4px;">{str(student_row.get('parent_name', ''))}</span> Chỗ ở hiện nay: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('current_address', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Là phụ huynh em: <span style="font-weight: bold; text-transform: uppercase; color: #1a237e; font-size: 16px; padding: 0 4px;">{str(student_row.get('student_name', '')).upper()}</span> Nam/Nữ: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_gender', ''))}</span> Dân tộc: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_ethnic', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Sinh ngày: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('student_dob', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Nơi sinh: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_pob', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Địa chỉ thường trú: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('permanent_address', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Quê quán của học sinh: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('hometown', '[Chưa cập nhật]'))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Đã học lớp (MẦM/CHỒI/LÁ) tại Trường: ..................................................................................................</div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Gia đình thuộc diện chính sách: ..........................................................................................................</div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Họ tên cha: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('father_name', ''))}</span> Nghề nghiệp: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('father_job', ''))}</span> Số điện thoại: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('father_phone', ''))}</span></div><div style="margin-bottom: 15px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Họ tên mẹ: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('mother_name', ''))}</span> Nghề nghiệp: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('mother_job', ''))}</span> Số điện thoại: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('mother_phone', ''))}</span></div><div style="text-indent: 25px; margin-top: 15px; text-align: justify;">Nay tôi viết đơn này kính trình Lãnh đạo Trường Tiểu học Dương Hòa cho con tôi được vào lớp 1 năm học {NAM_HOC} của Trường.</div><div style="text-indent: 25px; margin-top: 5px; text-align: justify; margin-bottom: 25px;">Khi con tôi được trúng tuyển vào học tại trường, tôi sẽ quan tâm nhắc nhở, tạo điều kiện thuận lợi nhất cho con học tập, rèn luyện, thực hiện đúng các nội quy, quy định của nhà trường.</div><div style="text-indent: 25px; font-weight: bold; margin-bottom: 10px;">Xin chân thành cảm ơn!</div></div>"""
+                
+                html_footer = f"""<table style="width: 100%; margin-top: 10px; border-collapse: collapse; font-family: 'Times New Roman', Times, serif;"><tr><td style="width: 55%; vertical-align: top; text-align: left; font-size: 14.5px;"><b style="font-style: italic; display: block; margin-bottom: 6px;">*Hồ sơ kèm theo gồm:</b><div style="margin-bottom: 3px;">[✓] - Bản sao giấy khai sinh;</div><div style="margin-bottom: 3px;">[✓] - Số định danh;</div><div style="margin-bottom: 3px;">{f'[✓]' if img_url.startswith('http') else '[ ]'} - Bản photo thẻ Bảo hiểm y tế;</div><div style="margin-bottom: 3px;">[ ] - Giấy xác nhận diện chính sách (lớp 1);</div><div style="margin-bottom: 3px;">[ ] - Ảnh 2x3 (1 tấm);</div><div style="margin-bottom: 15px;">[ ] - Ảnh 3x4 (1 tấm);</div>{f'<div style="border: 1px dashed #999; padding: 4px; width: 142px; background-color: #fafafa;"><img src="{img_url}" width="132" alt="BHYT"></div>' if img_url.startswith('http') else ''}</td><td style="width: 45%; text-align: center; vertical-align: top;"><span style="font-size: 14.5px; font-style: italic; display: block; margin-bottom: 4px;">Dương Hòa, ngày...... tháng...... năm 2026</span><b style="font-size: 15px; letter-spacing: 0.5px; display: block;">CHỮ KÝ PHỤ HUYNH</b><span style="font-size: 12px; color: gray; font-style: italic; display: block; margin-top: 2px;">(Ký bằng nét vẽ di động cảm ứng)</span><div style="margin: 8px 0;"><img src="{clean_sig}" width="180" style="mix-blend-mode: multiply;" alt="Chữ ký tay"></div><b style="text-transform: uppercase; font-size: 15px; letter-spacing: 0.5px; display: block; margin-top: 5px;">{actual_name}</b></td></tr></table></div></div>"""
+                
                 st.markdown(f"{html_top}{html_body}{html_footer}", unsafe_allow_html=True)
-                # ==============================================================================
-                # CƠ CHẾ ĐỘT PHÁ: Sử dụng thư viện FPDF chạy bằng Python Backend để tránh bị iframe chặn tải file
-                # ==============================================================================
-                pdf = FPDF(orientation="P", unit="mm", format="A4")
-                pdf.add_page()
-                # Sử dụng các phông chữ hệ thống tiêu chuẩn có sẵn trên máy chủ Linux đám mây
-                pdf.set_font("Helvetica", "B", 15)
-                pdf.cell(0, 10, "CONG HOA XA HOI CHU NGHIA VIET NAM", ln=True, align="C")
-                pdf.set_font("Helvetica", "", 13)
-                pdf.cell(0, 7, "Doc lap - Tu do - Hanh phuc", ln=True, align="C")
-                pdf.cell(0, 5, "---------------", ln=True, align="C")
-                pdf.ln(10)
                 
-                pdf.set_font("Helvetica", "B", 16)
-                pdf.cell(0, 10, "DON DANG KY DU TUYEN SINH VAO LOP 1", ln=True, align="C")
-                pdf.set_font("Helvetica", "B", 12)
-                pdf.cell(0, 7, f"Nam hoc: {NAM_HOC}", ln=True, align="C")
-                pdf.cell(0, 10, "Kinh gui: Hieu truong Truong Tieu hoc Duong Hoa", ln=True, align="C")
-                pdf.ln(5)
-                
-                pdf.set_font("Helvetica", "", 12)
-                pdf.multi_cell(0, 8, f"- Toi ten: {str(student_row.get('parent_name',''))}\n- Cho o hien nay: {str(student_row.get('current_address',''))}\n- La phu huynh em: {str(student_row.get('student_name','')).upper()}\n- Gioi tinh: {str(student_row.get('student_gender',''))}  - Dan toc: {str(student_row.get('student_ethnic',''))}\n- Sinh ngay: {str(student_row.get('student_dob',''))}  - Noi sinh: {str(student_row.get('student_pob',''))}\n- Dia chi thuong tru: {str(student_row.get('permanent_address',''))}\n- Que quan hoc sinh: {str(student_row.get('hometown',''))}\n- Ho ten cha: {str(student_row.get('father_name',''))}  - SDT: {str(student_row.get('father_phone',''))}\n- Ho tên me: {str(student_row.get('mother_name',''))}  - SĐT: {str(student_row.get('mother_phone',''))}")
-                pdf.ln(10)
-                
-                pdf.multi_cell(0, 7, f"Nay toi viet don nay kinh trinh Lanh dao Truong Tieu hoc Duong Hoa cho con toi duoc vao lop 1 nam hoc {NAM_HOC} cua Truong.\nKhi con toi duoc trung tuyen vao hoc tai truong, toi se quan tam nhac nho, tao dieu kien thuan loi nhat cho con hoc tap, ren luyen, thuc hien dung cac noi quy, quy dink cua nha truong.\nXin chan thanh cam on!")
-                pdf.ln(15)
-                
-                # Nhúng đè hình ảnh chữ ký tay phụ huynh bóc tách từ chuỗi base64 vào lề phải tệp PDF
-                try:
-                    sig_bytes = base64.b64decode(clean_sig)
-                    sig_stream = io.BytesIO(sig_bytes)
-                    # Gán vị trí tọa độ lề phải cho chữ ký cân đối
-                    pdf.image(sig_stream, x=130, y=pdf.get_y(), w=45)
-                except Exception:
-                    pass
-                
-                pdf.set_font("Helvetica", "I", 11)
-                pdf.cell(100, 6, "*Ho so kem theo gom:", ln=False)
-                pdf.cell(0, 6, "Duong Hoa, ngay.....thang.....nam 2026", ln=True, align="R")
-                pdf.set_font("Helvetica", "B", 11)
-                pdf.cell(100, 6, "[x] Ban sao giay khai sinh", ln=False)
-                pdf.cell(0, 6, "CHU KY PHU HUYNH", ln=True, align="R")
-                pdf.cell(100, 6, "[x] So dinh danh / The BHYT", ln=True)
-                pdf.ln(15)
-                pdf.cell(0, 6, f"{actual_name}", ln=True, align="R")
-                
-                # Xuất nhị phân dữ liệu khối PDF
-                pdf_output = pdf.output()
+                # GIẢI PHÁP ĐỘT PHÁ 100%: Sử dụng st.download_button chính quy của Streamlit để xuất file tài liệu biểu mẫu HTML sạch ra máy tính
+                full_html_document = f"""<html><head><title>Don_dang_ky_{selected_student}</title><style>body{{margin:0;padding:40px;background:white;color:black;}}</style></head><body>{html_top}{html_body}{html_footer}</body></html>"""
                 
                 st.write("<br>", unsafe_allow_html=True)
-                # KÍCH HOẠT: Nút tải file chính chủ Streamlit, gỡ bỏ hoàn toàn lỗi chặn bảo mật của Google Chrome/Cốc Cốc
                 st.download_button(
-                    label=f"📥 BẤM VÀO ĐÂY ĐỂ TẢI FILE PDF ĐƠN CỦA EM {selected_student}",
-                    data=bytes(pdf_output),
-                    file_name=f"Don_tuyen_sinh_{selected_student.replace(' ', '_')}.pdf",
-                    mime="application/pdf",
+                    label=f"📥 BẤM VÀO ĐÂY ĐỂ TẢI BIỂU MẪU ĐƠN CỦA EM {selected_student} VỀ MÁY TÍNH",
+                    data=full_html_document,
+                    file_name=f"Don_tuyen_sinh_{selected_student.replace(' ', '_')}.html",
+                    mime="text/html",
                     use_container_width=True
                 )
 
