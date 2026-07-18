@@ -85,7 +85,7 @@ password = st.text_input(
     type="password",
 )
 # ==============================================================================
-# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, HIỂN THỊ BIỂU ĐỒ THỐNG KÊ VÀ XUẤT EXCEL
+# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, HIỂN THỊ BIỂU ĐỒ THỐNG KÊ VÀ XUẤX EXCEL
 # ==============================================================================
 if password == "123456":  
     st.subheader(f"📋 Danh sách hồ sơ phiếu điền trực tuyến từ phụ huynh ({NAM_HOC})")
@@ -106,23 +106,17 @@ if password == "123456":
         st.markdown("### 📈 Biểu đồ tiến độ phụ huynh nộp đơn")
         if "created_at" in df.columns:
             try:
-                # Chuyển đổi cột thời gian và trích xuất chỉ lấy ngày (YYYY-MM-DD)
                 df_chart = df.copy()
                 df_chart["Ngay_Nop"] = pd.to_datetime(df_chart["created_at"]).dt.date
-                
-                # Gom nhóm đếm số lượng hồ sơ nộp phát sinh theo từng ngày
                 df_grouped = df_chart.groupby("Ngay_Nop").size().reset_index(name="Số lượng hồ sơ")
-                df_grouped = df_grouped.sort_values(by="Ngay_Nop")
-                df_grouped = df_grouped.set_index("Ngay_Nop")
+                df_grouped = df_grouped.sort_values(by="Ngay_Nop").set_index("Ngay_Nop")
                 
-                # Hiển thị số liệu tổng quan nhanh dạng số (Metrics)
                 col_m1, col_m2 = st.columns(2)
                 with col_m1:
                     st.metric(label="Tổng số hồ sơ tiếp nhận", value=f"{len(df)} trẻ")
                 with col_m2:
                     st.metric(label="Số ngày có phụ huynh khai đơn", value=f"{len(df_grouped)} ngày")
                 
-                # Vẽ biểu đồ đường trực quan theo trục thời gian
                 st.line_chart(df_grouped, use_container_width=True)
             except Exception as chart_err:
                 st.warning(f"Tạm thời chưa thể dựng biểu đồ tiến độ: {chart_err}")
@@ -154,8 +148,10 @@ if password == "123456":
             
             with col_view1:
                 st.markdown("**Ảnh thẻ BHYT:**")
-                img_url = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                if len(img_url) > 0 and pd.notna(img_url) and str(img_url).startswith("http"):
+                img_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
+                img_url = str(img_data_arr[0]).strip() if len(img_data_arr) > 0 else ""
+                
+                if img_url and img_url.startswith("http"):
                     st.image(img_url, caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
                 else:
                     st.warning("Học sinh này chưa có ảnh thẻ BHYT hoặc đường dẫn ảnh không hợp lệ.")
@@ -163,13 +159,14 @@ if password == "123456":
             with col_view2:
                 st.markdown("**Vùng ký xác nhận của phụ huynh:**")
                 if "Dữ liệu chữ ký mạng" in df_display.columns:
-                    sig_data = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
-                    p_name = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
+                    sig_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
+                    p_name_arr = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
                     
-                    if len(sig_data) > 0 and pd.notna(sig_data):
-                        actual_sig = str(sig_data)
-                        actual_name = p_name if len(p_name) > 0 else ""
-                        
+                    # Giải mã giá trị mảng thô (Fix lỗi ['TÔ ĐÌNH SƠN'])
+                    actual_sig = str(sig_data_arr[0]).strip() if len(sig_data_arr) > 0 else ""
+                    actual_name = str(p_name_arr[0]).strip() if len(p_name_arr) > 0 else ""
+                    
+                    if actual_sig and actual_sig != "None" and actual_sig != "nan":
                         st.markdown("<div style='border: 1px dashed #ccc; padding: 15px; width: 380px; text-align: center; background-color: #fff;'>", unsafe_allow_html=True)
                         st.markdown("<div style='font-weight: bold; font-size: 14px;'>KHÁCH HÀNG YÊU CẦU</div>", unsafe_allow_html=True)
                         st.markdown("<div style='font-style: italic; color: gray; font-size: 11px;'>(Ký, ghi rõ họ tên)</div>", unsafe_allow_html=True)
@@ -180,7 +177,7 @@ if password == "123456":
                         elif actual_sig.startswith("data:image"):
                             st.image(actual_sig, width=250)
                         else:
-                            st.markdown("<br><span style='color:orange;'>Dữ liệu ký không đúng định dạng chuẩn</span><br><br>", unsafe_allow_html=True)
+                            st.markdown(f"<div class='digital-sig-text'>{actual_sig}</div>", unsafe_allow_html=True)
                             
                         st.markdown(f"<b style='text-transform: uppercase; font-size: 14px;'>{actual_name}</b>", unsafe_allow_html=True)
                         st.markdown("</div>", unsafe_allow_html=True)
@@ -189,15 +186,18 @@ if password == "123456":
                 else:
                     st.error("Hệ thống đám mây hiện thiếu cấu trúc lưu trữ trường `parent_signature`.")
 
+        # Xử lý tối ưu giãn rộng cột Excel không lỗi (Fix lỗi column_letter)
+        from openpyxl.utils import get_column_letter
         buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             df_excel = df_display[cols_to_show]
             df_excel.to_excel(writer, index=False, sheet_name=sheet_name_excel[:31])
             worksheet = writer.sheets[sheet_name_excel[:31]]
-            for col in worksheet.columns:
+            
+            for col_idx, col in enumerate(worksheet.columns, start=1):
                 max_len = 0
-                col_letter = col.column_letter
+                col_letter = get_column_letter(col_idx)
                 for cell in col:
                     if cell.value:
                         max_len = max(max_len, len(str(cell.value)))
