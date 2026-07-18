@@ -1,3 +1,4 @@
 supabase
-streamlit-canvas
+streamlit-canvas==0.9.3
+scikit-image==0.21.0
 openpyxl
