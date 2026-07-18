@@ -4,3 +4,5 @@ qrcode[pil]
 supabase
 openpyxl
 requests
+streamlit-canvas==0.9.3
+pillow
