@@ -34,7 +34,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
-LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
+LINK_PHU_HUYNH = "https://appphuhuynhpy-mf4r5besth7jswlgrzwzuw.streamlit.app"  
 
 col_qr1, col_qr2 = st.columns(2)
 
