@@ -4,13 +4,14 @@ import uuid
 import pandas as pd
 import streamlit as st
 from supabase import Client, create_client
-from streamlit_signature_pad import st_signature_pad  # Thư viện vẽ ký tay cảm ứng
 
 # ==============================================================================
-# CẤU HÌNH HỆ THỐNG ĐỒNG BỘ CỦA BẠN
+# CẤU HÌNH HỆ THỐNG ĐỒNG BỘ
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
+# ĐÃ BỔ SUNG: Đường dẫn liên kết trực tuyến chính thức của biểu mẫu phụ huynh
+LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"
 
 try:
     SUPABASE_KEY = st.secrets["supabase_key"]
@@ -22,7 +23,6 @@ try:
 except Exception as e:
     st.error("Hệ thống đang bảo trì, vui lòng quay lại sau!")
 
-# Cấu hình giao diện di động hiển thị tối ưu trên màn hình điện thoại
 st.set_page_config(
     page_title=f"Đăng ký tuyển sinh {NAM_HOC}",
     page_icon="📝",
@@ -33,9 +33,8 @@ st.title(f"📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
 st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
 st.info("💡 Hướng dẫn: Phụ huynh vui lòng điền chính xác thông tin dựa theo Giấy khai sinh bản gốc của học sinh.")
 
-
 # ==============================================================================
-# PHẦN 1.A: GIAO DIỆN HIỂN THỊ BIỂU MẪU NHẬP LIỆU VÀ KHU VỰC KÝ TÊN
+# PHẦN 1.A: GIAO DIỆN HIỂN THỊ BIỂU MẪU NHẬP LIỆU VÀ CHỮ KÝ TỰ ĐỘNG
 # ==============================================================================
 with st.form("form_tuyen_sinh", clear_on_submit=False):
     
@@ -66,13 +65,11 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         mother_phone = st.text_input("Số điện thoại liên lạc của mẹ:")
 
     st.markdown("#### 📷 4. Đính kèm ảnh chụp thẻ BHYT")
-    st.caption("Yêu cầu: Phụ huynh sử dụng camera điện thoại chụp thật rõ nét mặt trước của thẻ BHYT để nhà trường đối chiếu mã định danh học sinh.")
+    st.caption("Yêu cầu: Phụ huynh sử dụng camera điện thoại chụp thật rõ nét mặt trước của thẻ BHYT.")
     uploaded_file = st.file_uploader("Nhấn vào đây để chụp ảnh hoặc tải file ảnh lên:", type=["jpg", "jpeg", "png"])
 
-    st.markdown("#### ✍️ 5. Xác nhận và Ký tên (Thiết kế chuẩn mẫu đơn giấy)")
+    st.markdown("#### ✍️ 5. Xác nhận và Ký tên điện tử")
     col_sig_left, col_sig_right = st.columns(2)
-    
-    signature_data = None
     
     with col_sig_left:
         st.markdown(
@@ -81,69 +78,52 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
                 KHÁCH HÀNG YÊU CẦU
             </div>
             <div style='text-align: center; font-style: italic; color: gray; font-size: 12px; margin-bottom: 8px;'>
-                (Ký, ghi rõ họ tên)
+                (Chữ ký điện tử hệ thống)
             </div>
             """, 
             unsafe_allow_html=True
         )
         
-        # Lựa chọn phương thức ký tên tiện lợi ngay trên điện thoại
-        hinh_thuc_ky = st.radio(
-            "Chọn hình thức ký tên:",
-            ["Ký tự động bằng font chữ", "Tự vẽ nét ký tay cảm ứng"],
-            horizontal=True
-        )
-        
-        if hinh_thuc_ky == "Ký tự động bằng font chữ":
-            if parent_name:
-                st.markdown(
-                    f"""
-                    <style>
-                        @import url('https://googleapis.com');
-                        .signature-box {{
-                            font-family: 'Dancing Script', cursive;
-                            font-size: 38px;
-                            color: #1a237e;
-                            text-align: center;
-                            padding: 15px;
-                            border: 1px dashed #bbb;
-                            background-color: #f8f9fa;
-                            border-radius: 4px;
-                        }}
-                    </style>
-                    <div class="signature-box">{parent_name}</div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                signature_data = f"TEXT_SIGNATURE:{parent_name}"
-            else:
-                st.warning("⚠️ Vui lòng điền 'Họ tên người khai đơn này' ở mục 3 để sinh chữ ký tự động.")
-        
-        else:
-            # Vùng cảm ứng hỗ trợ phụ huynh vuốt ký trực tiếp bằng tay
-            signature_data = st_signature_pad(
-                fill_color="rgba(0, 0, 0, 0)",
-                stroke_color="black",
-                background_color="#f8f9fa",
-                width=330,
-                height=150,
-                key="parent_signature_canvas"
+        # Tự động sinh chữ ký nghệ thuật bằng CSS khi phụ huynh gõ tên ở mục 3
+        if parent_name:
+            st.markdown(
+                f"""
+                <style>
+                    @import url('https://googleapis.com');
+                    .signature-box {{
+                        font-family: 'Dancing Script', cursive;
+                        font-size: 38px;
+                        color: #1a237e;
+                        text-align: center;
+                        padding: 15px;
+                        border: 1px dashed #bbb;
+                        background-color: #f8f9fa;
+                        border-radius: 4px;
+                    }}
+                </style>
+                <div class="signature-box">{parent_name}</div>
+                """,
+                unsafe_allow_html=True
             )
+            signature_data = f"TEXT_SIGNATURE:{parent_name}"
+        else:
+            st.markdown(
+                "<div style='border: 1px dashed #bbb; padding: 20px; text-align: center; color: gray; background-color: #f8f9fa; font-size: 13px;'>"
+                "Vui lòng điền họ tên ở mục 3 để xuất hiện chữ ký"
+                "</div>", 
+                unsafe_allow_html=True
+            )
+            signature_data = None
             
-        # Hiển thị Họ và tên viết hoa in đậm bên dưới nét ký giống mẫu phiếu giấy
         display_name = parent_name.upper() if parent_name else "..."
         st.markdown(
-            f"""
-            <div style='text-align: center; font-weight: bold; font-size: 14px; margin-top: 8px; text-transform: uppercase;'>
-                {display_name}
-            </div>
-            """, 
+            f"<div style='text-align: center; font-weight: bold; font-size: 14px; margin-top: 8px; text-transform: uppercase;'>{display_name}</div>", 
             unsafe_allow_html=True
         )
         
     with col_sig_right:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        st.caption("(*) Bằng việc xác nhận chữ ký, phụ huynh cam kết tất cả thông tin khai báo trên phiếu điện tử này là hoàn toàn chính xác và trùng khớp với giấy tờ gốc.")
+        st.caption("(*) Bằng việc nhấn nút gửi, phụ huynh xác nhận chữ ký điện tử trên và cam kết các thông tin khai báo là hoàn toàn chính xác.")
 
     st.markdown("---")
     submit_button = st.form_submit_button("🚀 GỬI HỒ SƠ ĐĂNG KÝ NGAY")
@@ -158,9 +138,7 @@ if submit_button:
     elif not student_dob:
         st.error("❌ Vui lòng điền Ngày tháng năm sinh của học sinh!")
     elif not parent_name:
-        st.error("❌ Vui lòng điền Họ tên người khai đơn!")
-    elif signature_data is None:
-        st.error("❌ Vui lòng thực hiện ký tên xác nhận vào ô bên trái!")
+        st.error("❌ Vui lòng điền Họ tên người khai đơn tại Mục 3 để xác nhận chữ ký!")
     elif not uploaded_file:
         st.error("❌ Vui lòng đính kèm ảnh chụp thẻ BHYT của học sinh!")
     else:
@@ -183,20 +161,11 @@ if submit_button:
 
                 # 2. Đồng bộ hóa gói dữ liệu cấu trúc để chèn vào bảng Database
                 insert_data = {
-                    "student_name": student_name,
-                    "student_gender": student_gender,
-                    "student_dob": student_dob,
-                    "student_ethnic": student_ethnic,
-                    "student_pob": student_pob,
-                    "permanent_address": permanent_address,
-                    "current_address": current_address,
-                    "parent_name": parent_name,
-                    "father_name": father_name,
-                    "father_phone": father_phone,
-                    "mother_name": mother_name,
-                    "mother_phone": mother_phone,
-                    "insurance_image": insurance_image_url,
-                    "parent_signature": signature_data  # Lưu mã chữ ký tự động hoặc chuỗi ảnh Base64
+                    "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
+                    "student_ethnic": student_ethnic, "student_pob": student_pob, "permanent_address": permanent_address,
+                    "current_address": current_address, "parent_name": parent_name, "father_name": father_name,
+                    "father_phone": father_phone, "mother_name": mother_name, "mother_phone": mother_phone,
+                    "insurance_image": insurance_image_url, "parent_signature": signature_data
                 }
 
                 # Thực thi lệnh chèn dòng thông tin lên bảng ho_so_tuyen_sinh trên Supabase
