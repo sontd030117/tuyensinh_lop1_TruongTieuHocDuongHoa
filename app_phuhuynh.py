@@ -3,7 +3,6 @@ import mimetypes
 import uuid
 import pandas as pd
 import streamlit as st
-import requests  # Thư viện tải danh sách 63 tỉnh thành sau sáp nhập trực tuyến
 from supabase import Client, create_client
 
 # ==============================================================================
@@ -29,28 +28,135 @@ st.set_page_config(
 )
 
 # ----------------------------------------------------------------------
-# HÀM TẢI DỮ LIỆU ĐỊA DANH 63 TỈNH THÀNH CHUẨN QUỐC GIA (SAU SÁP NHẬP)
+# ĐÃ CẬP NHẬT: DANH MỤC CÁC TỈNH THÀNH SÁP NHẬP ĐƠN VỊ HÀNH CHÍNH
 # ----------------------------------------------------------------------
-@st.cache_data(ttl=86400)  # Bộ nhớ đệm lưu trữ dữ liệu trong 24 giờ
-def get_vietnam_provinces():
-    try:
-        response = requests.get("https://open-api.vn")
-        if response.status_code == 200:
-            return response.json()
-    except:
-        pass
-    return [{"name": "Tỉnh Kiên Giang", "codename": "kien_giang", "districts": [{"name": "Huyện Kiên Lương", "wards": [{"name": "Xã Dương Hòa"}]}]}]
-
-provinces_data = get_vietnam_provinces()
-province_mapping = {p["name"]: p for p in provinces_data}
+DATA_HANH_CHINH = {
+    "Tỉnh Kiên Giang": {
+        "Huyện Kiên Lương": ["Thị trấn Kiên Lương", "Xã Dương Hòa", "Xã Hòa Điền", "Xã Kiên Bình", "Xã Bình An", "Xã Bình Trị", "Xã Hòn Nghệ"],
+        "Thành phố Rạch Giá": ["Phường Vĩnh Thanh Vân", "Phường Vĩnh Thanh", "Phường Vĩnh Lạc", "Phường An Hòa", "Phường An Bình", "Phường Rạch Sỏi"],
+        "Thành phố Phú Quốc": ["Phường Dương Đông", "Phường An Thới", "Xã Hàm Ninh", "Xã Dương Tơ", "Xã Gành Dầu"],
+        "Thành phố Hà Tiên": ["Phường Đông Hồ", "Phường Bình San", "Phường Pháo Đài", "Phường Tô Châu"]
+    },
+    "Tỉnh An Giang": {
+        "Thành phố Long Xuyên": ["Phường Mỹ Bình", "Phường Mỹ Long", "Phường Mỹ Phước", "Phường Mỹ Quý"],
+        "Thành phố Châu Đốc": ["Phường Châu Phú A", "Phường Châu Phú B", "Phường Núi Sam", "Phường Vĩnh Mỹ"],
+        "Huyện Chợ Mới": ["Thị trấn Chợ Mới", "Thị trấn Mỹ Luông", "Xã Kiến An", "Xã Kiến Thành"]
+    },
+    "Thành phố Hồ Chí Minh": {
+        "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Cô Giang", "Phường Tân Định", "Phường Đa Kao"],
+        "Quận 3": ["Phường Võ Thị Sáu (Sáp nhập)", "Phường 1", "Phường 2", "Phường 4", "Phường 5"],
+        "Quận 5": ["Phường 1 (Sáp nhập)", "Phường 2", "Phường 5", "Phường 7", "Phường 8"],
+        "Quận 10": ["Phường 1 (Sáp nhập)", "Phường 2", "Phường 4", "Phường 12", "Phường 14"],
+        "Thành phố Thủ Đức": ["Phường Thủ Thiêm", "Phường An Khánh", "Phường Hiệp Bình Chánh", "Phường Linh Đông"]
+    },
+    "Thành phố Hà Nội": {
+        "Quận Hoàn Kiếm": ["Phường Đồng Xuân", "Phường Hàng Bạc", "Phường Hàng Bồ", "Phường Tràng Tiền"],
+        "Quận Ba Đình": ["Phường Đội Cấn", "Phường Kim Mã", "Phường Quán Thánh", "Phường Trúc Bạch"],
+        "Quận Hai Bà Trưng": ["Phường Đồng Nhân (Sáp nhập)", "Phường Bách Khoa", "Phường Bạch Mai"],
+        "Quận Đống Đa": ["Phường Khâm Thiên", "Phường Trung Phụng", "Phường Văn Miếu", "Phường Quốc Tử Giám"]
+    },
+    "Thành phố Cần Thơ": {
+        "Quận Ninh Kiều": ["Phường Tân An (Sáp nhập mới)", "Phường Thới Bình", "Phường An Hòa", "Phường An Khánh"]
+    },
+    "Tỉnh Nghệ An": {
+        "Thành phố Vinh": ["Phường Hồng Sơn", "Phường Quang Trung", "Phường Vinh Tân", "Xã Nghi Phú"],
+        "Thị xã Cửa Lò": ["Phường Nghi Thu", "Phường Nghi Hương", "Phường Thu Thủy"]
+    },
+    "Tỉnh Hà Tĩnh": {
+        "Thành phố Hà Tĩnh": ["Phường Bắc Hà", "Phường Nam Ngạn", "Phường Nguyễn Du", "Phường Trần Phú"],
+        "Huyện Thạch Hà": ["Thị trấn Thạch Hà", "Xã Thạch Đài", "Xã Thạch Long"]
+    },
+    "Tỉnh Nam Định": {
+        "Thành phố Nam Định": ["Phường Vị Hoàng", "Phường Năng Tĩnh", "Phường Trường Thi", "Xã Lộc An"],
+        "Huyện Giao Thủy": ["Thị trấn Quất Lâm", "Thị trấn Giao Thủy", "Xã Giao Phong"]
+    },
+    "Tỉnh Thanh Hóa": {
+        "Thành phố Thanh Hóa": ["Phường Ba Đình", "Phường Ngọc Trạo", "Phường Hàm Rồng", "Xã Đông Tân"],
+        "Thị xã Sầm Sơn": ["Phường Trường Sơn", "Phường Bắc Sơn", "Phường Trung Sơn"]
+    },
+    "Tỉnh Quảng Ninh": {
+        "Thành phố Hạ Long": ["Phường Hồng Gai", "Phường Bạch Đằng", "Phường Bãi Cháy", "Phường Cao Xanh"],
+        "Thành phố Cẩm Phả": ["Phường Cẩm Tây", "Phường Cẩm Đông", "Phường Cẩm Sơn"]
+    },
+    "Thành phố Hải Phòng": {
+        "Quận Hồng Bàng": ["Phường Hoàng Văn Thụ", "Phường Quang Trung", "Phường Minh Khai"],
+        "Quận Ngô Quyền": ["Phường Lạch Tray", "Phường Máy Tơ", "Phường Cầu Đất"]
+    },
+    "Tỉnh Hải Dương": {
+        "Thành phố Hải Dương": ["Phường Trần Hưng Đạo", "Phường Quang Trung", "Phường Nguyễn Trãi"]
+    },
+    "Tỉnh Hưng Yên": {
+        "Thành phố Hưng Yên": ["Phường Hiến Nam", "Phường Lam Sơn", "Phường Lê Lợi"]
+    },
+    "Tỉnh Thái Bình": {
+        "Thành phố Thái Bình": ["Phường Lê Hồng Phong", "Phường Kỳ Bá", "Phường Trần Lãm"]
+    },
+    "Tỉnh Ninh Bình": {
+        "Thành phố Ninh Bình": ["Phường Vân Giang", "Phường Thanh Bình", "Phường Bích Đào"]
+    },
+    "Tỉnh Hà Nam": {
+        "Thành phố Phủ Lý": ["Phường Minh Khai", "Phường Hai Bà Trưng", "Phường Lương Khánh Thiện"]
+    },
+    "Tỉnh Vĩnh Phúc": {
+        "Thành phố Vĩnh Yên": ["Phường Liên Bảo", "Phường Tích Sơn", "Phường Đồng Tâm"]
+    },
+    "Tỉnh Phú Thọ": {
+        "Thành phố Việt Trì": ["Phường Tiên Cát", "Phường Gia Cẩm", "Phường Thọ Sơn"]
+    },
+    "Tỉnh Bắc Ninh": {
+        "Thành phố Bắc Ninh": ["Phường Tiền An", "Phường Đại Phúc", "Phường Ninh Xá"]
+    },
+    "Tỉnh Thái Nguyên": {
+        "Thành phố Thái Nguyên": ["Phường Phan Đình Phùng", "Phường Trưng Vương", "Phường Hoàng Văn Thụ"]
+    },
+    "Tỉnh Quảng Nam": {
+        "Thành phố Tam Kỳ": ["Phường An Xuân", "Phường Phước Hòa", "Phường Tân Thạnh"]
+    },
+    "Thành phố Đà Nẵng": {
+        "Quận Hải Châu": ["Phường Phước Ninh", "Phường Nam Dương", "Phường Bình Hiên"],
+        "Quận Thanh Khê": ["Phường Thạc Gián", "Phường Chính Gián", "Phường Vĩnh Trung"]
+    },
+    "Tỉnh Thừa Thiên Huế": {
+        "Thành phố Huế": ["Phường Thuận Thành", "Phường Vĩnh Ninh", "Phường Phú Hội"]
+    },
+    "Tỉnh Bình Định": {
+        "Thành phố Quy Nhơn": ["Phường Lê Lợi", "Phường Trần Hưng Đạo", "Phường Nguyễn Văn Cừ"]
+    },
+    "Tỉnh Khánh Hòa": {
+        "Thành phố Nha Trang": ["Phường Tân Lập", "Phường Lộc Thọ", "Phường Phước Tiến"]
+    },
+    "Tỉnh Lâm Đồng": {
+        "Thành phố Đà Lạt": ["Phường 1", "Phường 2", "Phường 3", "Phường 4"]
+    },
+    "Tỉnh Bình Dương": {
+        "Thành phố Thủ Dầu Một": ["Phường Phú Cường", "Phường Hiệp Thành", "Phường Chánh Nghĩa"]
+    },
+    "Tỉnh Đồng Nai": {
+        "Thành phố Biên Hòa": ["Phường Thanh Bình", "Phường Trung Dũng", "Phường Quyết Thắng"]
+    },
+    "Tỉnh Bà Rịa - Vũng Tàu": {
+        "Thành phố Vũng Tàu": ["Phường 1", "Phường 2", "Phường 3", "Phường 4"]
+    },
+    "Tỉnh Long An": {
+        "Thành phố Tân An": ["Phường 1", "Phường 2", "Phường 3", "Phường 4"]
+    },
+    "Tỉnh Đồng Tháp": {
+        "Thành phố Cao Lãnh": ["Phường 1", "Phường 2", "Phường 3", "Phường Hòa Thuận"]
+    },
+    "Tỉnh Vĩnh Long": {
+        "Thành phố Vĩnh Long": ["Phường 1", "Phường 2", "Phường 3", "Phường 4"]
+    },
+    "Tỉnh Tiền Giang": {
+        "Thành phố Mỹ Tho": ["Phường 1", "Phường 2", "Phường 3", "Phường 4"]
+    },
+    "Tỉnh Bến Tre": {
+        "Thành phố Bến Tre": ["Phường An Hội (Sáp nhập)", "Phường Phú Khương", "Phường Phú Tân"]
+    }
+}
 
 st.title(f"📝 Phiếu Đăng Ký Tuyển Sinh Lớp 1")
 st.subheader(f"Trường Tiểu học Dương Hòa — Năm học {NAM_HOC}")
 st.info("💡 Hướng dẫn: Phụ huynh vui lòng điền chính xác thông tin dựa theo Giấy khai sinh bản gốc của học sinh.")
-
-# ==============================================================================
-# PHẦN INTERACTIVE FORM NHẬP LIỆU BIỂU MẪU ĐIỆN TỬ
-# ==============================================================================
 with st.form("form_tuyen_sinh", clear_on_submit=False):
     
     st.markdown("#### 👤 1. Thông tin của học sinh")
@@ -64,41 +170,28 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
         student_ethnic = st.text_input("Dân tộc (Ví dụ: Kinh, Khơ-me, Hoa):", value="Kinh")
         student_pob = st.text_input("Nơi sinh (Ghi rõ Tỉnh hoặc Thành phố):")
 
-    # CHỌN QUÊ QUÁN ĐẦY ĐỦ TỈNH THÀNH (ĐỊA DANH SAU SÁP NHẬP)
+    # CHỌN QUÊ QUÁN TỰ ĐỘNG THEO DANH MỤC 34 TỈNH THÀNH SÁP NHẬP
     st.markdown("**📍 Quê quán của học sinh (Ghi theo Giấy khai sinh bản gốc)**")
     col_qq1, col_qq2, col_qq3 = st.columns(3)
     with col_qq1:
-        qq_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(province_mapping.keys()), key="qq_tinh")
-    
-    qq_districts = province_mapping[qq_tinh_sel]["districts"]
-    qq_district_mapping = {d["name"]: d for d in qq_districts}
+        qq_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(DATA_HANH_CHINH.keys()), key="qq_tinh")
     with col_qq2:
-        qq_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(qq_district_mapping.keys()), key="qq_huyen")
-    
-    qq_wards = qq_district_mapping[qq_huyen_sel]["wards"]
-    qq_ward_names = [w["name"] for w in qq_wards] if qq_wards else ["Chưa phân loại xã"]
+        qq_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(DATA_HANH_CHINH[qq_tinh_sel].keys()), key="qq_huyen")
     with col_qq3:
-        qq_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", qq_ward_names, key="qq_xa")
+        qq_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", DATA_HANH_CHINH[qq_tinh_sel][qq_huyen_sel], key="qq_xa")
         
     hometown = f"{qq_xa_sel}, {qq_huyen_sel}, {qq_tinh_sel}"
-    # ----------------------------------------------------------------------
-    # ĐỊA CHỈ THƯỜNG TRÚ ĐẦY ĐỦ 63 TỈNH THÀNH THEO PHÂN CẤP HÀNH CHÍNH
-    # ----------------------------------------------------------------------
+
+    # ĐỊA CHỈ THƯỜNG TRÚ & CHỖ Ở HIỆN NAY
     st.markdown("#### 🏠 2. Thông tin cư trú của gia đình")
     st.markdown("**📍 Địa chỉ đăng ký thường trú (Theo Sổ hộ khẩu/Thông tin cư trú)**")
     col_tt1, col_tt2, col_tt3 = st.columns(3)
     with col_tt1:
-        tt_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(province_mapping.keys()), key="tt_tinh")
-        
-    tt_districts = province_mapping[tt_tinh_sel]["districts"]
-    tt_district_mapping = {d["name"]: d for d in tt_districts}
+        tt_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(DATA_HANH_CHINH.keys()), key="tt_tinh")
     with col_tt2:
-        tt_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(tt_district_mapping.keys()), key="tt_huyen")
-        
-    tt_wards = tt_district_mapping[tt_huyen_sel]["wards"]
-    tt_ward_names = [w["name"] for w in tt_wards] if tt_wards else ["Chưa phân loại xã"]
+        tt_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(DATA_HANH_CHINH[tt_tinh_sel].keys()), key="tt_huyen")
     with col_tt3:
-        tt_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", tt_ward_names, key="tt_xa")
+        tt_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", DATA_HANH_CHINH[tt_tinh_sel][tt_huyen_sel], key="tt_xa")
         
     tt_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Thường trú):", placeholder="Ví dụ: Số 12, Ấp Tà Săng")
     permanent_address = f"{tt_chi_tiet}, {tt_xa_sel}, {tt_huyen_sel}, {tt_tinh_sel}".strip(", ")
@@ -113,17 +206,11 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
     else:
         col_co1, col_co2, col_co3 = st.columns(3)
         with col_co1:
-            co_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(province_mapping.keys()), key="co_tinh")
-            
-        co_districts = province_mapping[co_tinh_sel]["districts"]
-        co_district_mapping = {d["name"]: d for d in co_districts}
+            co_tinh_sel = st.selectbox("Chọn Tỉnh/Thành phố", list(DATA_HANH_CHINH.keys()), key="co_tinh")
         with col_co2:
-            co_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(co_district_mapping.keys()), key="co_huyen")
-            
-        co_wards = co_district_mapping[co_huyen_sel]["wards"]
-        co_ward_names = [w["name"] for w in co_wards] if co_wards else ["Chưa phân loại xã"]
+            co_huyen_sel = st.selectbox("Chọn Quận/Huyện", list(DATA_HANH_CHINH[co_tinh_sel].keys()), key="co_huyen")
         with col_co3:
-            co_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", co_ward_names, key="co_xa")
+            co_xa_sel = st.selectbox("Chọn Xã/Phường/Thị trấn", DATA_HANH_CHINH[co_tinh_sel][co_huyen_sel], key="co_xa")
             
         co_chi_tiet = st.text_input("Số nhà, tổ, ấp/khu phố (Chỗ ở hiện nay):", placeholder="Ví dụ: Số 45, Khấu Phố Ba Hòn")
         current_address = f"{co_chi_tiet}, {co_xa_sel}, {co_huyen_sel}, {co_tinh_sel}".strip(", ")
@@ -186,18 +273,13 @@ with st.form("form_tuyen_sinh", clear_on_submit=False):
             signature_data = f"TEXT_SIGNATURE:{parent_name}"
         else:
             st.markdown(
-                "<div style='border: 1px dashed #bbb; padding: 25px; text-align: center; color: gray; background-color: #f8f9fa; font-size: 13px;'>"
-                "Vui lòng điền tên cha hoặc mẹ ở mục 3 để xuất hiện chữ ký"
-                "</div>", 
+                "<div style='border: 1px dashed #bbb; padding: 25px; text-align: center; color: gray; background-color: #f8f9fa; font-size: 13px;'>Vui lòng điền tên cha hoặc mẹ ở mục 3 để xuất hiện chữ ký</div>", 
                 unsafe_allow_html=True
             )
             signature_data = None
             
         display_name = parent_name.upper() if parent_name else "..."
-        st.markdown(
-            f"<div style='text-align: center; font-weight: bold; font-size: 14px; margin-top: 8px; text-transform: uppercase;'>{display_name}</div>", 
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<div style='text-align: center; font-weight: bold; font-size: 14px; margin-top: 8px; text-transform: uppercase;'>{display_name}</div>", unsafe_allow_html=True)
         
     with col_sig_right:
         st.markdown("<br><br>", unsafe_allow_html=True)
@@ -224,7 +306,7 @@ if submit_button:
             try:
                 insurance_image_url = ""
                 
-                # 1. Tải dữ liệu ảnh thẻ BHYT lên Supabase Storage (bhyt_bucket)
+                # 1. Tải dữ liệu ảnh thẻ BHYT lên Supabase Storage
                 file_extension = mimetypes.guess_extension(uploaded_file.type) or ".png"
                 unique_filename = f"{uuid.uuid4()}{file_extension}"
                 file_bytes = uploaded_file.getvalue()
@@ -237,7 +319,7 @@ if submit_button:
                 
                 insurance_image_url = supabase.storage.from_("bhyt_bucket").get_public_url(unique_filename)
 
-                # 2. Đồng bộ hóa gói dữ liệu cấu trúc để chèn vào bảng Database
+                # 2. Đồng bộ hóa dữ liệu để ghi vào bảng Database
                 insert_data = {
                     "student_name": student_name, "student_gender": student_gender, "student_dob": student_dob,
                     "student_ethnic": student_ethnic, "student_pob": student_pob, 
@@ -250,7 +332,7 @@ if submit_button:
                     "insurance_image": insurance_image_url, "parent_signature": signature_data
                 }
 
-                # Thực thi lệnh chèn dòng thông tin lên bảng ho_so_tuyen_sinh trên Supabase
+                # Gửi dữ liệu lên bảng ho_so_tuyen_sinh trên Supabase
                 supabase.table("ho_so_tuyen_sinh").insert(insert_data).execute()
 
                 st.balloons()
@@ -258,7 +340,7 @@ if submit_button:
                 st.markdown(f"""
                 Kính gửi phụ huynh **{parent_name}**, nhà trường đã tiếp nhận thành công dữ liệu đăng ký tuyển sinh của học sinh **{student_name}**. 
                 
-                Thông tin hồ sơ và chữ ký xác nhận đã được đồng bộ hóa và lưu trữ an toàn trên hệ thống tuyển sinh trực tuyến của nhà trường. Phụ huynh có thể đóng trình duyệt web này được rồi. Xin chân thành cảm ơn phụ huynh!
+                Thông tin hồ sơ và chữ ký xác nhận đã được đồng bộ hóa và lưu trữ an toàn trên hệ thống tuyển sinh trực tuyến của nhà trường.
                 """)
                 
             except Exception as e:
