@@ -1,5 +1,91 @@
+import io
+import pandas as pd
+import qrcode
+import streamlit as st
+from supabase import Client, create_client
+
 # ==============================================================================
-# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, HIỂN THỊ BIỂU MỒ THỐNG KÊ VÀ XUẤT EXCEL
+# PHẦN 2.1: CẤU HÌNH HỆ THỐNG, SINH MÃ QR VÀ XÁC THỰC BẢO MẬT
+# ==============================================================================
+NAM_HOC = "2026 - 2027"
+SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
+
+try:
+    # Lấy key bảo mật ngầm khi chạy trực tuyến trên Streamlit Cloud
+    SUPABASE_KEY = st.secrets["supabase_key"]
+except Exception:
+    # Key dùng tạm dưới máy tính local
+    SUPABASE_KEY = "sb_secret_yjs4xz1bfe-oxhv0lob0-g_yiwbh9k2"
+
+try:
+    # Khởi tạo kết nối đám mây chính thức
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    st.error(f"Lỗi kết nối hệ thống đám mây Supabase: {e}")
+
+# Cấu hình giao diện quản trị rộng toàn màn hình máy tính
+st.set_page_config(
+    page_title=f"Hệ thống quản lý tuyển sinh {NAM_HOC}",
+    page_icon="📊",
+    layout="wide"
+)
+st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương Hòa (Năm học {NAM_HOC})")
+
+# Nhúng phông chữ viết tay Google Font vào toàn bộ trang quản trị để hiển thị chữ ký tự động
+st.markdown(
+    """
+    <style>
+        @import url('https://googleapis.com');
+        .digital-sig-text {
+            font-family: 'Dancing Script', cursive;
+            font-size: 36px;
+            color: #1a237e;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
+LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
+
+col_qr1, col_qr2 = st.columns(2)
+
+with col_qr1:
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    # Ép mã QR mã hóa dạng bytes để giữ nguyên chữ thường của link, tránh lỗi Not Found
+    qr.add_data(LINK_PHU_HUYNH.encode('utf-8'))
+    qr.make(fit=True)
+    img_qr = qr.make_image(fill_color="black", back_color="white")
+    
+    img_buffer = io.BytesIO()
+    img_qr.save(img_buffer, format="PNG")
+    st.image(
+        img_buffer.getvalue(),
+        caption="Click chuột phải chọn Lưu ảnh để in ấn",
+        width=200,
+    )
+
+with col_qr2:
+    st.write("")
+    st.success(f"**🔗 Đường dẫn trực tuyến của phiếu điền:** `{LINK_PHU_HUYNH}`")
+    st.info(f"""
+    **💡 Hướng dẫn vận hành nhanh dành cho Giáo viên:**
+    1. **Tải mã QR:** Bạn nhấp chuột phải vào ảnh mã QR bên cạnh -> Chọn **Lưu hình ảnh thành...** để đem đi in ấn hoặc gửi Zalo cho phụ huynh.
+    2. **Phụ huynh quét mã:** Phụ huynh chỉ cần dùng điện thoại quét mã này để mở phiếu điền và chụp ảnh thẻ BHYT từ xa.
+    3. **Lấy dữ liệu:** Giáo viên nhập mật khẩu hệ thống ở ô phía dưới để kiểm tra bảng dữ liệu thời gian thực và tải file Excel năm học {NAM_HOC}.
+    """)
+
+st.write("---")
+
+password = st.text_input(
+    "Vui lòng nhập mật khẩu quản trị để xem dữ liệu học sinh:",
+    type="password",
+)
+# ==============================================================================
+# PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY, HIỂN THỊ BIỂU ĐỒ THỐNG KÊ VÀ XUẤT EXCEL
 # ==============================================================================
 if password == "123456":  
     st.subheader(f"📋 Danh sách hồ sơ phiếu điền trực tuyến từ phụ huynh ({NAM_HOC})")
@@ -16,9 +102,7 @@ if password == "123456":
     if rows:
         df = pd.DataFrame(rows)
 
-        # ----------------------------------------------------------------------
-        # ĐÃ NÂNG CẤP: KHỐI BIỂU ĐỒ THỐNG KÊ SỐ LƯỢNG HỒ SƠ THEO NGÀY
-        # ----------------------------------------------------------------------
+        # KHỐI BIỂU ĐỒ THỐNG KÊ SỐ LƯỢNG HỒ SƠ THEO NGÀY
         st.markdown("### 📈 Biểu đồ tiến độ phụ huynh nộp đơn")
         if "created_at" in df.columns:
             try:
@@ -71,8 +155,8 @@ if password == "123456":
             with col_view1:
                 st.markdown("**Ảnh thẻ BHYT:**")
                 img_url = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                if len(img_url) > 0 and pd.notna(img_url) and str(img_url[0]).startswith("http"):
-                    st.image(img_url[0], caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
+                if len(img_url) > 0 and pd.notna(img_url) and str(img_url).startswith("http"):
+                    st.image(img_url, caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
                 else:
                     st.warning("Học sinh này chưa có ảnh thẻ BHYT hoặc đường dẫn ảnh không hợp lệ.")
                     
@@ -82,9 +166,9 @@ if password == "123456":
                     sig_data = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
                     p_name = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
                     
-                    if len(sig_data) > 0 and pd.notna(sig_data[0]):
-                        actual_sig = str(sig_data[0])
-                        actual_name = p_name[0] if len(p_name) > 0 else ""
+                    if len(sig_data) > 0 and pd.notna(sig_data):
+                        actual_sig = str(sig_data)
+                        actual_name = p_name if len(p_name) > 0 else ""
                         
                         st.markdown("<div style='border: 1px dashed #ccc; padding: 15px; width: 380px; text-align: center; background-color: #fff;'>", unsafe_allow_html=True)
                         st.markdown("<div style='font-weight: bold; font-size: 14px;'>KHÁCH HÀNG YÊU CẦU</div>", unsafe_allow_html=True)
