@@ -30,7 +30,6 @@ st.set_page_config(
     layout="wide"
 )
 st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương Hòa (Năm học {NAM_HOC})")
-
 # Nhúng phông chữ viết tay giả lập nét ký thật Mrs Saint Delafield vào CSS toàn trang
 st.markdown(
     """
@@ -48,6 +47,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
 LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
 
@@ -67,7 +67,6 @@ with col_qr1:
         caption="Click chuột phải chọn Lưu ảnh để in ấn",
         width=200,
     )
-
 with col_qr2:
     st.write("")
     st.success(f"**🔗 Đường dẫn trực tuyến của phiếu điền:** `{LINK_PHU_HUYNH}`")
@@ -79,21 +78,17 @@ with col_qr2:
     """)
 
 st.write("---")
+password = st.text_input("Vui lòng nhập mật khẩu quản trị để xem dữ liệu học sinh:", type="password")
 
-password = st.text_input(
-    "Vui lòng nhập mật khẩu quản trị để xem dữ liệu học sinh:",
-    type="password",
-)
 # ==============================================================================
 # PHẦN 2.2: LOGIC TẢI DỮ LIỆU ĐÁM MÂY REAL-TIME, SỬA MÚI GIỜ VN VÀ XUẤT EXCEL
 # ==============================================================================
 if password == "123456":  
     st.subheader(f"📋 Danh sách hồ sơ phiếu điền trực tuyến từ phụ huynh ({NAM_HOC})")
 
-    # Loại bỏ hoàn toàn bộ nhớ đệm Cache để tải dữ liệu Real-time ngay lập tức khi vào trang
+    # Loại bỏ bộ nhớ đệm Cache để tải dữ liệu Real-time ngay lập tức khi vào trang
     with st.spinner("⏳ Đang kết nối trực tiếp đám mây lấy dữ liệu mới nhất..."):
         try:
-            # Truy vấn toàn bộ dữ liệu, sắp xếp hồ sơ mới nộp lên đầu bảng
             response = supabase.table("ho_so_tuyen_sinh").select("*").order("created_at", desc=True).execute()
             rows = response.data
         except Exception as e:
@@ -108,22 +103,16 @@ if password == "123456":
         if "created_at" in df.columns:
             try:
                 df_chart = df.copy()
-                # Ép kiểu thời gian sang múi giờ Việt Nam (Asia/Ho_Chi_Minh) để không bị lệch ngày
                 df_chart["Time_VN"] = pd.to_datetime(df_chart["created_at"]).dt.tz_convert("Asia/Ho_Chi_Minh")
                 df_chart["Ngay_Nop"] = df_chart["Time_VN"].dt.date
-                
-                # Gom nhóm đếm số lượng hồ sơ nộp phát sinh theo từng ngày
                 df_grouped = df_chart.groupby("Ngay_Nop").size().reset_index(name="Số lượng hồ sơ")
                 df_grouped = df_grouped.sort_values(by="Ngay_Nop").set_index("Ngay_Nop")
                 
-                # Hiển thị số liệu tổng quan nhanh dạng số (Metrics)
                 col_m1, col_m2 = st.columns(2)
                 with col_m1:
                     st.metric(label="Tổng số hồ sơ tiếp nhận", value=f"{len(df)} trẻ")
                 with col_m2:
                     st.metric(label="Số ngày có phụ huynh khai đơn", value=f"{len(df_grouped)} ngày")
-                
-                # Vẽ biểu đồ đường
                 st.line_chart(df_grouped, use_container_width=True)
             except Exception as chart_err:
                 try:
@@ -134,11 +123,9 @@ if password == "123456":
                     st.line_chart(df_grouped, use_container_width=True)
                 except:
                     st.warning("Biểu đồ đang cập nhật chuỗi thời gian...")
-
         st.write("---")
         st.markdown("### 📝 Chi tiết danh sách hồ sơ tuyển sinh")
 
-        # Cấu hình danh mục cột hiển thị (Đồng bộ đầy đủ cả cột quê quán và nghề nghiệp mới)
         column_mapping = {
             "created_at": "Thời gian đăng ký", "parent_name": "Người khai đơn", "hometown": "Quê quán học sinh",
             "current_address": "Chỗ ở hiện nay", "student_name": "Tên học sinh", "student_gender": "Giới tính", 
@@ -151,141 +138,176 @@ if password == "123456":
         available_cols = [col for col in column_mapping.keys() if col in df.columns]
         df_display = df[available_cols].rename(columns=column_mapping)
 
-        # Ẩn cột chứa chuỗi mã hóa chữ ký thô loằng ngoằng để bảng chính hiển thị gọn gàng
         cols_to_show = [c for c in df_display.columns if c != "Dữ liệu chữ ký mạng"]
         st.dataframe(df_display[cols_to_show], use_container_width=True)
 
         st.markdown("### 📷 Tra cứu & In ấn Minh chứng hồ sơ Học sinh")
         student_list = df_display["Tên học sinh"].unique() if "Tên học sinh" in df_display.columns else []
+        
         if len(student_list) > 0:
             selected_student = st.selectbox("Chọn học sinh cần kiểm tra & in ấn hồ sơ:", student_list)
             
-            # ----------------------------------------------------------------------
-            # ĐÃ FIX LỖI CRASH: Chuyển đổi dòng dữ liệu về Dictionary chuẩn để gọi .get() an toàn
-            # ----------------------------------------------------------------------
-            matched_rows = df[df["student_name"] == selected_student]
-            student_row = matched_rows.iloc[0].to_dict() if not matched_rows.empty else {}
+            # Giải mã bóc tách bản ghi chuyển về hàng ngang dữ liệu (Series)
+            matched_data = df[df["student_name"] == selected_student]
             
-            img_url = str(student_row.get("insurance_image", "")).strip()
-            raw_sig = str(student_row.get("parent_signature", "")).strip()
-            actual_name = str(student_row.get("parent_name", "")).strip()
-            
-            # Dọn dẹp mảng thô bọc dữ liệu dấu ngoặc vuông dôi dư từ mảng
-            clean_sig = raw_sig.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
-            actual_name = actual_name.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
-            
-            st.write("")
-            st.markdown("**📄 Bản mô phỏng xem trước khi in ra giấy A4:**")
-            
-            # Mã HTML/CSS tạo hiệu ứng hộp giấy A4 đổ bóng hiển thị đầy đủ thông tin bao gồm Quê Quán mới thêm
-            html_print_form = f"""
-            <div style="background-color: #f0f2f6; padding: 20px; display: flex; justify-content: center;">
-                <div id="print-area" style="
-                    width: 790px; 
-                    min-height: 1000px; 
-                    padding: 50px 60px; 
-                    background-color: white; 
-                    color: black; 
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
-                    border-radius: 4px;
-                    font-family: 'Times New Roman', Times, serif; 
-                    font-size: 16px; 
-                    line-height: 1.6;
-                ">
-                    <!-- Tiêu ngữ chuẩn văn bản hành chính -->
-                    <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 3px;">
-                        CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập - Tự do - Hạnh phúc
+            if not matched_data.empty:
+                # Trích xuất dòng dữ liệu đầu tiên dưới dạng Dictionary để tránh lỗi .get()
+                student_row = matched_data.iloc[0].to_dict()
+                
+                img_url = str(student_row.get("insurance_image", "")).strip()
+                raw_sig = str(student_row.get("parent_signature", "")).strip()
+                actual_name = str(student_row.get("parent_name", "")).strip()
+                
+                clean_sig = raw_sig.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
+                actual_name = actual_name.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
+                
+                st.write("")
+                st.markdown("**📄 Bản mô phỏng xem trước khi in ra giấy A4 (Bám sát đơn mẫu giấy của trường):**")
+                
+                # Cấu trúc chuỗi biểu mẫu HTML thiết kế dòng chấm lặp chạy dưới chữ viết tay
+                html_print_form = f"""
+                <div style="background-color: #f0f2f6; padding: 20px; display: flex; justify-content: center;">
+                    <div id="print-area" style="
+                        width: 790px; 
+                        min-height: 1050px; 
+                        padding: 40px 50px; 
+                        background-color: white; 
+                        color: black; 
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+                        border-radius: 4px;
+                        font-family: 'Times New Roman', Times, serif; 
+                        font-size: 15.5px; 
+                        line-height: 1.7;
+                    ">
+                        <!-- Quốc hiệu Tiêu ngữ chuẩn đơn giấy -->
+                        <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 2px; font-family: 'Times New Roman', Times, serif;">
+                            CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập - Tự do - Hạnh phúc
+                        </div>
+                        <div style="text-align: center; margin-bottom: 20px; letter-spacing: 2px; font-weight: bold;">---------------</div>
+                        
+                        <!-- Tên đơn bám sát mẫu giấy của trường -->
+                        <div style="text-align: center; font-weight: bold; font-size: 17px; margin-bottom: 3px; font-family: 'Times New Roman', Times, serif;">
+                            ĐƠN ĐĂNG KÝ DỰ TUYỂN SINH VÀO LỚP 1
+                        </div>
+                        <div style="text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
+                            Năm học: {NAM_HOC}
+                        </div>
+                        
+                        <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 25px; font-family: 'Times New Roman', Times, serif;">
+                            Kính gửi: Hiệu trưởng Trường Tiểu học Dương Hòa
+                        </div>
+                        <!-- Luồng nội dung văn bản kèm dòng chấm nền kéo dài mô phỏng viết tay -->
+                        <div style="text-align: justify; font-family: 'Times New Roman', Times, serif;">
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Tôi tên: <span style="font-weight: bold; color: #1a237e; font-size: 16px; padding: 0 4px;">{str(student_row.get('parent_name', '')).strip()}</span> 
+                                Chỗ ở hiện nay: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('current_address', '')).strip()}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Là phụ huynh em: <span style="font-weight: bold; text-transform: uppercase; color: #1a237e; font-size: 16px; padding: 0 4px;">{str(student_row.get('student_name', '')).upper()}</span>
+                                Nam/Nữ: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_gender', ''))}</span>
+                                Dân tộc: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_ethnic', ''))}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Sinh ngày: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('student_dob', ''))}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Nơi sinh: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_pob', ''))}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Địa chỉ thường trú: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('permanent_address', '')).strip()}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Quê quán của học sinh: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('hometown', '[Chưa cập nhật]')).strip()}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Đã học lớp (MẦM/CHỒI/LÁ) tại Trường: ..................................................................................................
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Gia đình thuộc diện chính sách: ..........................................................................................................
+                            </div>
+                            
+                            <div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Họ tên cha: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('father_name', ''))}</span>
+                                Nghề nghiệp: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('father_job', ''))}</span>
+                                Số điện thoại: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('father_phone', ''))}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 15px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">
+                                - Họ tên mẹ: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('mother_name', ''))}</span>
+                                Nghề nghiệp: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('mother_job', ''))}</span>
+                                Số điện thoại: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('mother_phone', ''))}</span>
+                            </div>
+                            
+                            <div style="text-indent: 25px; margin-top: 15px; text-align: justify;">
+                                Nay tôi viết đơn này kính trình Lãnh đạo Trường Tiểu học Dương Hòa cho con tôi được vào lớp 1 năm học {NAM_HOC} của Trường.
+                            </div>
+                            <div style="text-indent: 25px; margin-top: 5px; text-align: justify; margin-bottom: 25px;">
+                                Khi con tôi được trúng tuyển vào học tại trường, tôi sẽ quan tâm nhắc nhở, tạo điều kiện thuận lợi nhất cho con học tập, rèn luyện, thực hiện đúng các nội quy, quy định của nhà trường.
+                            </div>
+                            
+                            <div style="text-indent: 25px; font-weight: bold; margin-bottom: 10px;">Xin chân thành cảm ơn!</div>
+                        </div>
+                        <!-- Vùng chữ ký và bảng danh mục hồ sơ đính kèm bám sát ảnh mẫu -->
+                        <table style="width: 100%; margin-top: 10px; border-collapse: collapse; font-family: 'Times New Roman', Times, serif;">
+                            <tr>
+                                <td style="width: 55%; vertical-align: top; text-align: left; font-size: 14.5px;">
+                                    <b style="font-style: italic; display: block; margin-bottom: 6px;">*Hồ sơ kèm theo gồm: (đánh (✓) vào [✓] nếu có)</b>
+                                    <div style="margin-bottom: 3px;">[✓] - Bản sao giấy khai sinh;</div>
+                                    <div style="margin-bottom: 3px;">[✓] - Số định danh;</div>
+                                    <div style="margin-bottom: 3px;">
+                                        {f'[✓]' if img_url.startswith('http') else '[ ]'} - Bản photo thẻ Bảo hiểm y tế;
+                                    </div>
+                                    <div style="margin-bottom: 3px;">[ ] - Giấy xác nhận diện chính sách (lớp 1);</div>
+                                    <div style="margin-bottom: 3px;">[ ] - Ảnh 2x3 (1 tấm);</div>
+                                    <div style="margin-bottom: 15px;">[ ] - Ảnh 3x4 (1 tấm);</div>
+                                    
+                                    <!-- Nhúng hộp ảnh BHYT phụ huynh chụp trực quan gọn gàng bên góc trái đơn -->
+                                    {f'<div style="border: 1px dashed #999; padding: 4px; width: 142px; background-color: #fafafa;"><img src="{img_url}" width="132" alt="BHYT"></div>' if img_url.startswith('http') else ''}
+                                </td>
+                                <td style="width: 45%; text-align: center; vertical-align: top;">
+                                    <span style="font-size: 14.5px; font-style: italic; display: block; margin-bottom: 4px;">Dương Hòa, ngày...... tháng...... năm 2026</span>
+                                    <b style="font-size: 15px; letter-spacing: 0.5px; display: block;">KÍNH ĐƠN</b>
+                                    <span style="font-size: 12px; color: gray; font-style: italic; display: block; margin-top: 2px;">(Hệ thống ký điện tử)</span>
+                                    
+                                    <!-- Chữ ký viết tay nghiêng nghệ thuật thanh mảnh -->
+                                    <div style="font-family: 'Mrs Saint Delafield', cursive; font-size: 65px; color: #0b1d3a; margin: 15px 0; line-height: 0.8; letter-spacing: 1px;">
+                                        {clean_sig.replace('TEXT_SIGNATURE:', '') if clean_sig.startswith('TEXT_SIGNATURE:') else actual_name}
+                                    </div>
+                                    <b style="text-transform: uppercase; font-size: 15px; letter-spacing: 0.5px; display: block; margin-top: 10px;">{actual_name}</b>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
-                    <div style="text-align: center; margin-bottom: 25px; letter-spacing: 2px;">---------------</div>
-                    
-                    <!-- Tiêu đề biểu mẫu phiếu -->
-                    <div style="text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; text-transform: uppercase;">
-                        PHIẾU ĐĂNG KÝ TUYỂN SINH LỚP 1<br><span style="font-size: 15px; font-weight: normal;">NĂM HỌC: {NAM_HOC}</span>
-                    </div>
-                    <div style="text-align: center; font-style: italic; margin-top: -15px; margin-bottom: 35px;">Kính gửi: Ban Giám hiệu Trường Tiểu học Dương Hòa</div>
-                    
-                    <!-- Phần 1: Thông tin học sinh -->
-                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">1. THÔNG TIN HỌC SINH:</div>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                        <tr>
-                            <td style="width: 60%; padding: 6px 0;">- Họ và tên học sinh: <b style="text-transform: uppercase;">{str(student_row.get('student_name', '')).upper()}</b></td>
-                            <td style="width: 40%; padding: 6px 0;">- Giới tính: {student_row.get('student_gender', '')}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 6px 0;">- Ngày tháng năm sinh: {student_row.get('student_dob', '')}</td>
-                            <td style="padding: 6px 0;">- Dân tộc: {student_row.get('student_ethnic', '')}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 6px 0;">- Nơi sinh (Ghi theo khai sinh): {student_row.get('student_pob', '')}</td>
-                            <td style="padding: 6px 0;">- Quê quán: {student_row.get('hometown', '[Chưa cập nhật]')}</td>
-                        </tr>
-                    </table>
-                    <!-- Phần 2: Cư trú -->
-                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">2. THÔNG TIN CƯ TRÚ:</div>
-                    <div style="padding: 2px 0; margin-bottom: 20px; text-align: justify;">
-                        - Địa chỉ đăng ký thường trú: {student_row.get('permanent_address', '')}<br>
-                        - Địa chỉ chỗ ở hiện nay (thực tế): {student_row.get('current_address', '')}
-                    </div>
-
-                    <!-- Phần 3: Gia đình -->
-                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">3. THÔNG TIN GIA ĐÌNH:</div>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px;">
-                        <tr>
-                            <td style="width: 55%; padding: 6px 0;">- Họ tên cha: {student_row.get('father_name', '')}</td>
-                            <td style="width: 45%; padding: 6px 0;">- Điện thoại cha: {student_row.get('father_phone', '')}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="padding: 6px 0; padding-bottom: 10px;">- Nghề nghiệp cha: {student_row.get('father_job', '')}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 6px 0;">- Họ tên mẹ: {student_row.get('mother_name', '')}</td>
-                            <td style="padding: 6px 0;">- Điện thoại mẹ: {student_row.get('mother_phone', '')}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="padding: 6px 0;">- Nghề nghiệp mẹ: {student_row.get('mother_job', '')}</td>
-                        </tr>
-                    </table>
-
-                    <table style="width: 100%; margin-top: 30px;">
-                        <tr>
-                            <td style="width: 50%; text-align: center; font-style: italic; vertical-align: top;">
-                                {f'<div style="border: 1px dashed #aaa; padding: 6px; width: 152px; margin: 0 auto; background-color: #fafafa;"><img src="{img_url}" width="140" alt="BHYT"></div>' if img_url.startswith('http') else '<div style="border: 1px dashed #ccc; padding: 30px 10px; width: 150px; margin: 0 auto; color: gray; font-size: 13px;">[ Không có ảnh BHYT ]</div>'}
-                                <br><span style="font-size: 13px; color: #555;">Ảnh minh chứng BHYT</span>
-                            </td>
-                            <td style="width: 50%; text-align: center; vertical-align: top;">
-                                <span style="font-size: 14px; font-style: italic;">Dương Hòa, Ngày...... Tháng...... Năm 2026</span><br>
-                                <b style="font-size: 14px; display: block; margin-top: 5px;">CHỮ KÝ TỰ ĐỘNG</b>
-                                <span style="font-size: 12px; color: gray; font-style: italic;">(Hệ thống ký điện tử)</span>
-                                <div style="font-family: 'Mrs Saint Delafield', cursive; font-size: 62px; color: #0b1d3a; margin: 5px 0; line-height: 1;">
-                                    {clean_sig.replace('TEXT_SIGNATURE:', '') if clean_sig.startswith('TEXT_SIGNATURE:') else actual_name}
-                                </div>
-                                <b style="text-transform: uppercase; font-size: 14px; letter-spacing: 0.5px;">{actual_name}</b>
-                            </td>
-                        </tr>
-                    </table>
                 </div>
-            </div>
-            """
-            st.markdown(html_print_form, unsafe_allow_html=True)
-            
-            # Hàm Javascript kích hoạt lệnh máy in
-            st.markdown(
                 """
-                <script>
-                function ThucHienInAn() {
-                    var printContents = document.getElementById('print-area').innerHTML;
-                    var originalContents = document.body.innerHTML;
-                    document.body.innerHTML = printContents;
-                    window.print();
-                    document.body.innerHTML = originalContents;
-                    window.location.reload();
-                }
-                </script>
-                """, 
-                unsafe_allow_html=True
-            )
-            
-            st.button("🖨️ BẤM VÀO ĐÂY ĐỂ TIẾN HÀNH IN PHIẾU NÀY RA GIẤY A4", on_click=st.rerun)
+                # Biên dịch kết xuất mã lệnh HTML chính xác lên màn hình quản trị
+                st.markdown(html_print_form, unsafe_allow_html=True)
+                
+                # Hàm thực thi lệnh gọi máy in của máy tính
+                st.markdown(
+                    """
+                    <script>
+                    function ThucHienInAn() {
+                        var printContents = document.getElementById('print-area').innerHTML;
+                        var originalContents = document.body.innerHTML;
+                        document.body.innerHTML = printContents;
+                        window.print();
+                        document.body.innerHTML = originalContents;
+                        window.location.reload();
+                    }
+                    </script>
+                    """, 
+                    unsafe_allow_html=True
+                )
+                
+                st.button("🖨️ BẤM VÀO ĐÂY ĐỂ TIẾN HÀNH IN PHIẾU NÀY RA GIẤY A4", on_click=st.rerun)
 
         # Khối tạo file báo cáo Excel tổng hợp hỗ trợ giãn cột tự động không lỗi
         from openpyxl.utils import get_column_letter
