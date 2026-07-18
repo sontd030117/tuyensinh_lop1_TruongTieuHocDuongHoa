@@ -5,7 +5,7 @@ import streamlit as st
 from supabase import Client, create_client
 
 # ==============================================================================
-# PHẦN 2.1: CẤU HÌNH HỆ THỐNG, SINH MÃ QR VÀ XÁC THỰC BẢO MẬT
+# PHẦN 2.1: CẤU HÌNH HỆ THỐNG VÀ XÁC THỰC BẢO MẬT ĐÁM MÂY SUPABASE
 # ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
@@ -31,7 +31,7 @@ st.set_page_config(
 )
 st.title(f"📊 Hệ thống quản trị viên - Trường Tiểu học Dương Hòa (Năm học {NAM_HOC})")
 
-# Nhúng phông chữ viết tay giả lập nét ký thật Mrs Saint Delafield
+# Nhúng phông chữ viết tay giả lập nét ký thật Mrs Saint Delafield vào CSS toàn trang
 st.markdown(
     """
     <style>
@@ -48,7 +48,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 st.markdown("### 📱 Mã QR chính thức dành cho phụ huynh nộp đơn từ xa")
 LINK_PHU_HUYNH = "https://tuyensinhlop1truongtieuhocduonghoa-nbuiedwqmgfwauvzlsfofq.streamlit.app"  
 
@@ -75,7 +74,7 @@ with col_qr2:
     st.info(f"""
     **💡 Hướng dẫn vận hành nhanh dành cho Giáo viên:**
     1. **Tải mã QR:** Bạn nhấp chuột phải vào ảnh mã QR bên cạnh -> Chọn **Lưu hình ảnh thành...** để đem đi in ấn hoặc gửi Zalo cho phụ huynh.
-    2. **Phụ huynh quét mã:** Phụ huynh chỉ cần dùng điện thoại quét mã này để mở phiếu điền và chụp ảnh thẻ BHYT từ xa.
+    2. **Phụ huynh quét mã:** Phụ huynh chỉ cần dùng điện thoại quét mã này để mở phiếu điền và chọn địa bàn cư trú, quê quán tiện lợi.
     3. **Lấy dữ liệu:** Giáo viên nhập mật khẩu hệ thống ở ô phía dưới để kiểm tra bảng dữ liệu thời gian thực và tải file Excel năm học {NAM_HOC}.
     """)
 
@@ -127,7 +126,6 @@ if password == "123456":
                 # Vẽ biểu đồ đường
                 st.line_chart(df_grouped, use_container_width=True)
             except Exception as chart_err:
-                # Cơ chế dự phòng nếu bản ghi hệ thống gặp lỗi chuỗi định dạng thời gian
                 try:
                     df_chart = df.copy()
                     df_chart["Ngay_Nop"] = pd.to_datetime(df_chart["created_at"]).dt.date
@@ -140,14 +138,14 @@ if password == "123456":
         st.write("---")
         st.markdown("### 📝 Chi tiết danh sách hồ sơ tuyển sinh")
 
-        # Cấu hình danh mục cột hiển thị (Đồng bộ đầy đủ cả 2 cột nghề nghiệp mới)
+        # Cấu hình danh mục cột hiển thị (Đồng bộ đầy đủ cả cột quê quán và nghề nghiệp mới)
         column_mapping = {
-            "created_at": "Thời gian đăng ký", "parent_name": "Người khai đơn", "current_address": "Chỗ ở hiện nay",
-            "student_name": "Tên học sinh", "student_gender": "Giới tính", "student_ethnic": "Dân tộc",
-            "student_dob": "Ngày sinh", "student_pob": "Nơi sinh", "permanent_address": "Thường trú",
-            "father_name": "Họ tên cha", "father_phone": "SĐT Cha", "father_job": "Nghề nghiệp cha",
-            "mother_name": "Họ tên mẹ", "mother_phone": "SĐT Mẹ", "mother_job": "Nghề nghiệp mẹ",
-            "insurance_image": "Đường dẫn ảnh thẻ BHYT", "parent_signature": "Dữ liệu chữ ký mạng"
+            "created_at": "Thời gian đăng ký", "parent_name": "Người khai đơn", "hometown": "Quê quán học sinh",
+            "current_address": "Chỗ ở hiện nay", "student_name": "Tên học sinh", "student_gender": "Giới tính", 
+            "student_ethnic": "Dân tộc", "student_dob": "Ngày sinh", "student_pob": "Nơi sinh", 
+            "permanent_address": "Thường trú", "father_name": "Họ tên cha", "father_phone": "SĐT Cha", 
+            "father_job": "Nghề nghiệp cha", "mother_name": "Họ tên mẹ", "mother_phone": "SĐT Mẹ", 
+            "mother_job": "Nghề nghiệp mẹ", "insurance_image": "Đường dẫn ảnh thẻ BHYT", "parent_signature": "Dữ liệu chữ ký mạng"
         }
 
         available_cols = [col for col in column_mapping.keys() if col in df.columns]
@@ -157,61 +155,132 @@ if password == "123456":
         cols_to_show = [c for c in df_display.columns if c != "Dữ liệu chữ ký mạng"]
         st.dataframe(df_display[cols_to_show], use_container_width=True)
 
-        st.markdown("### 📷 Tra cứu Minh chứng hồ sơ Học sinh")
+        st.markdown("### 📷 Tra cứu & In ấn Minh chứng hồ sơ Học sinh")
         student_list = df_display["Tên học sinh"].unique() if "Tên học sinh" in df_display.columns else []
-        
         if len(student_list) > 0:
-            selected_student = st.selectbox("Chọn học sinh cần xem ảnh minh chứng & chữ ký:", student_list)
-            col_view1, col_view2 = st.columns(2)
+            selected_student = st.selectbox("Chọn học sinh cần kiểm tra & in ấn hồ sơ:", student_list)
             
-            with col_view1:
-                st.markdown("**Ảnh thẻ BHYT:**")
-                img_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Đường dẫn ảnh thẻ BHYT"].values
-                
-                # Giải mã bóc tách dữ liệu mảng ảnh dôi dư dấu ngoặc vuông
-                img_url = ""
-                if len(img_data_arr) > 0 and pd.notna(img_data_arr):
-                    img_url = str(img_data_arr).replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
-                
-                if img_url and img_url.startswith("http"):
-                    st.image(img_url, caption=f"Ảnh thẻ BHYT: {selected_student}", width=350)
-                else:
-                    st.warning("Học sinh này chưa có ảnh thẻ BHYT hoặc đường dẫn ảnh không hợp lệ.")
+            # Lọc trích xuất bản ghi học sinh cụ thể
+            student_row = df[df["student_name"] == selected_student].iloc
+            
+            img_url = str(student_row.get("insurance_image", "")).strip()
+            raw_sig = str(student_row.get("parent_signature", "")).strip()
+            actual_name = str(student_row.get("parent_name", "")).strip()
+            
+            # Dọn dẹp mảng thô bọc dữ liệu dấu ngoặc vuông
+            clean_sig = raw_sig.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
+            actual_name = actual_name.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
+            
+            st.write("")
+            st.markdown("**📄 Bản mô phỏng xem trước khi in ra giấy A4:**")
+            
+            # Mã HTML/CSS tạo hiệu ứng hộp giấy A4 đổ bóng hiển thị đầy đủ thông tin bao gồm Quê Quán mới thêm
+            html_print_form = f"""
+            <div style="background-color: #f0f2f6; padding: 20px; display: flex; justify-content: center;">
+                <div id="print-area" style="
+                    width: 790px; 
+                    min-height: 1000px; 
+                    padding: 50px 60px; 
+                    background-color: white; 
+                    color: black; 
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+                    border-radius: 4px;
+                    font-family: 'Times New Roman', Times, serif; 
+                    font-size: 16px; 
+                    line-height: 1.6;
+                ">
+                    <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 3px;">
+                        CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập - Tự do - Hạnh phúc
+                    </div>
+                    <div style="text-align: center; margin-bottom: 25px; letter-spacing: 2px;">---------------</div>
                     
-            with col_view2:
-                st.markdown("**Vùng ký xác nhận của phụ huynh:**")
-                if "Dữ liệu chữ ký mạng" in df_display.columns:
-                    sig_data_arr = df_display[df_display["Tên học sinh"] == selected_student]["Dữ liệu chữ ký mạng"].values
-                    p_name_arr = df_display[df_display["Tên học sinh"] == selected_student]["Người khai đơn"].values
+                    <div style="text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; text-transform: uppercase;">
+                        PHIẾU ĐĂNG KÝ TUYỂN SINH LỚP 1<br><span style="font-size: 15px; font-weight: normal;">NĂM HỌC: {NAM_HOC}</span>
+                    </div>
+                    <div style="text-align: center; font-style: italic; margin-top: -15px; margin-bottom: 35px;">Kính gửi: Ban Giám hiệu Trường Tiểu học Dương Hòa</div>
                     
-                    # Giải mã bóc tách loại bỏ hoàn toàn dấu mảng thừa dấu ngoặc vuông ['...']
-                    raw_sig = str(sig_data_arr).strip() if len(sig_data_arr) > 0 else ""
-                    actual_name = str(p_name_arr).strip() if len(p_name_arr) > 0 else ""
-                    
-                    clean_sig = raw_sig.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
-                    actual_name = actual_name.replace("[", "").replace("]", "").replace("'", "").replace('"', "").strip()
-                    
-                    if clean_sig and clean_sig != "None" and clean_sig != "nan":
-                        st.markdown("<div style='border: 1px dashed #ccc; padding: 15px; width: 380px; text-align: center; background-color: #fff;'>", unsafe_allow_html=True)
-                        st.markdown("<div style='font-weight: bold; font-size: 14px;'>CHỮ KÝ TỰ ĐỘNG</div>", unsafe_allow_html=True)
-                        st.markdown("<div style='font-style: italic; color: gray; font-size: 11px;'>(Hệ thống ký điện tử)</div>", unsafe_allow_html=True)
-                        
-                        if clean_sig.startswith("TEXT_SIGNATURE:"):
-                            display_text = clean_sig.replace("TEXT_SIGNATURE:", "")
-                            st.markdown(f"<div class='digital-sig-text'>{display_text}</div>", unsafe_allow_html=True)
-                        elif clean_sig.startswith("data:image"):
-                            st.image(clean_sig, width=250)
-                        else:
-                            st.markdown(f"<div class='digital-sig-text'>{clean_sig}</div>", unsafe_allow_html=True)
-                            
-                        st.markdown(f"<b style='text-transform: uppercase; font-size: 14px;'>{actual_name}</b>", unsafe_allow_html=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
-                    else:
-                        st.warning("Học sinh này chưa thực hiện ký xác nhận.")
-                else:
-                    st.error("Hệ thống đám mây hiện thiếu cấu trúc lưu trữ trường `parent_signature`.")
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">1. THÔNG TIN HỌC SINH:</div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                        <tr>
+                            <td style="width: 60%; padding: 6px 0;">- Họ và tên học sinh: <b style="text-transform: uppercase;">{str(student_row.get('student_name', '')).upper()}</b></td>
+                            <td style="width: 40%; padding: 6px 0;">- Giới tính: {student_row.get('student_gender', '')}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0;">- Ngày tháng năm sinh: {student_row.get('student_dob', '')}</td>
+                            <td style="padding: 6px 0;">- Dân tộc: {student_row.get('student_ethnic', '')}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0;">- Nơi sinh (Ghi theo khai sinh): {student_row.get('student_pob', '')}</td>
+                            <td style="padding: 6px 0;">- Quê quán: {student_row.get('hometown', '[Chưa cập nhật]')}</td>
+                        </tr>
+                    </table>
 
-        # Xử lý tối ưu giãn rộng cột Excel không lỗi bằng hàm get_column_letter chuẩn
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">2. THÔNG TIN CƯ TRÚ:</div>
+                    <div style="padding: 2px 0; margin-bottom: 20px; text-align: justify;">
+                        - Địa chỉ đăng ký thường trú: {student_row.get('permanent_address', '')}<br>
+                        - Địa chỉ chỗ ở hiện nay (thực tế): {student_row.get('current_address', '')}
+                    </div>
+
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 12px; font-size: 17px;">3. THÔNG TIN GIA ĐÌNH:</div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px;">
+                        <tr>
+                            <td style="width: 55%; padding: 6px 0;">- Họ tên cha: {student_row.get('father_name', '')}</td>
+                            <td style="width: 45%; padding: 6px 0;">- Điện thoại cha: {student_row.get('father_phone', '')}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="padding: 6px 0; padding-bottom: 10px;">- Nghề nghiệp cha: {student_row.get('father_job', '')}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0;">- Họ tên mẹ: {student_row.get('mother_name', '')}</td>
+                            <td style="padding: 6px 0;">- Điện thoại mẹ: {student_row.get('mother_phone', '')}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="padding: 6px 0;">- Nghề nghiệp mẹ: {student_row.get('mother_job', '')}</td>
+                        </tr>
+                    </table>
+
+                    <table style="width: 100%; margin-top: 30px;">
+                        <tr>
+                            <td style="width: 50%; text-align: center; font-style: italic; vertical-align: top;">
+                                {f'<div style="border: 1px dashed #aaa; padding: 6px; width: 152px; margin: 0 auto; background-color: #fafafa;"><img src="{img_url}" width="140" alt="BHYT"></div>' if img_url.startswith('http') else '<div style="border: 1px dashed #ccc; padding: 30px 10px; width: 150px; margin: 0 auto; color: gray; font-size: 13px;">[ Không có ảnh BHYT ]</div>'}
+                                <br><span style="font-size: 13px; color: #555;">Ảnh minh chứng BHYT</span>
+                            </td>
+                            <td style="width: 50%; text-align: center; vertical-align: top;">
+                                <span style="font-size: 14px; font-style: italic;">Dương Hòa, Ngày...... Tháng...... Năm 2026</span><br>
+                                <b style="font-size: 14px; display: block; margin-top: 5px;">CHỮ KÝ TỰ ĐỘNG</b>
+                                <span style="font-size: 12px; color: gray; font-style: italic;">(Hệ thống ký điện tử)</span>
+                                <div style="font-family: 'Mrs Saint Delafield', cursive; font-size: 62px; color: #0b1d3a; margin: 5px 0; line-height: 1;">
+                                    {clean_sig.replace('TEXT_SIGNATURE:', '') if clean_sig.startswith('TEXT_SIGNATURE:') else actual_name}
+                                </div>
+                                <b style="text-transform: uppercase; font-size: 14px; letter-spacing: 0.5px;">{actual_name}</b>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            """
+            st.markdown(html_print_form, unsafe_allow_html=True)
+            
+            # Hàm Javascript kích hoạt lệnh máy in
+            st.markdown(
+                """
+                <script>
+                function ThucHienInAn() {
+                    var printContents = document.getElementById('print-area').innerHTML;
+                    var originalContents = document.body.innerHTML;
+                    document.body.innerHTML = printContents;
+                    window.print();
+                    document.body.innerHTML = originalContents;
+                    window.location.reload();
+                }
+                </script>
+                """, 
+                unsafe_allow_html=True
+            )
+            
+            st.button("🖨️ BẤM VÀO ĐÂY ĐỂ TIẾN HÀNH IN PHIẾU NÀY RA GIẤY A4", on_click=st.rerun)
+
+        # Khối tạo file báo cáo Excel tổng hợp hỗ trợ giãn cột tự động
         from openpyxl.utils import get_column_letter
         buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
