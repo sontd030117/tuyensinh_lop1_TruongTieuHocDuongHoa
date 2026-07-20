@@ -7,11 +7,10 @@ import streamlit as st
 import streamlit.components.v1 as components
 from supabase import Client, create_client
 
-# Cấu hình biến môi trường cố định cho năm học
+# Cấu hình tham số hệ thống cố định
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
 
-# Khởi tạo kết nối bảo mật đến cơ sở dữ liệu Supabase
 try:
     SUPABASE_KEY = st.secrets["supabase_key"]
 except Exception:
@@ -20,9 +19,9 @@ except Exception:
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
-    st.error("Hệ thống trục trặc đường truyền, vui lòng quay lại sau!")
+    st.error("Hệ thống đang bảo trì, vui lòng quay lại sau!")
 
-# Cấu hình thuộc tính hiển thị giao diện Web Mobile-Responsive
+# Cấu hình giao diện Streamlit thích ứng giao diện di động
 st.set_page_config(
     page_title=f"Đăng ký tuyển sinh {NAM_HOC}",
     page_icon="📝",
@@ -35,47 +34,30 @@ st.info("💡 Hướng dẫn: Phụ huynh vui lòng nhập chính xác thông ti
 st.write("---")
 st.markdown("#### 👤 Khai báo thông tin chi tiết hồ sơ học sinh")
 
-# Nhóm các ô nhập liệu phân loại lý lịch học sinh
 st.text_input("Họ và tên học sinh (Viết hoa có dấu):", key="inp_st_name")
 col_hs1, col_hs2 = st.columns(2)
-
 with col_hs1:
     st.selectbox("Giới tính:", ["Nam", "Nữ"], key="inp_st_gender")
     st.text_input("Ngày sinh (Ví dụ: 15/08/2020):", key="inp_st_dob")
-
 with col_hs2:
     st.text_input("Dân tộc:", value="Kinh", key="inp_st_ethnic")
     st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):", key="inp_st_pob")
 
-# Khu vực ô trống để phụ huynh tự điền thông tin địa chỉ cư trú
+# Khu vực ô trống tự do thay thế cho dropdown hành chính cũ
 st.text_input("Quê quán (Ghi Xã/Huyện/Tỉnh):", key="inp_hometown", placeholder="Ví dụ: Xã Dương Hòa, Huyện Kiên Lương, Tỉnh Kiên Giang")
 st.text_input("Địa chỉ cư trú hiện nay (Số nhà, đường, ấp/khu phố, xã, huyện, tỉnh):", key="inp_address", placeholder="Ví dụ: Số 278, tổ 8, ấp Tà Săng, Xã Dương Hòa, Huyện Kiên Lương, Kiên Giang")
 st.write("---")
-st.markdown("#### 👥 Thông tin liên hệ của cha mẹ học sinh")
-
-# Nhập dữ liệu của Cha
 st.text_input("Họ tên cha:", key="inp_f_name")
-col_f1, col_f2 = st.columns(2)
-with col_f1:
-    st.text_input("SĐT cha:", key="inp_f_phone")
-with col_f2:
-    st.text_input("Nghề nghiệp cha:", key="inp_f_job")
-
+st.text_input("SĐT cha:", key="inp_f_phone")
+st.text_input("Nghề nghiệp cha:", key="inp_f_job")
 st.write("---") 
-
-# Nhập dữ liệu của Mẹ
 st.text_input("Họ tên mẹ:", key="inp_m_name")
-col_m1, col_m2 = st.columns(2)
-with col_m1:
-    st.text_input("SĐT mẹ:", key="inp_m_phone")
-with col_m2:
-    st.text_input("Nghề nghiệp mẹ:", key="inp_m_job")
+st.text_input("SĐT mẹ:", key="inp_m_phone")
+st.text_input("Nghề nghiệp mẹ:", key="inp_m_job")
 
 st.write("---")
-st.markdown("#### 📸 Minh chứng y tế điện tử")
 uploaded_file = st.file_uploader("Nhấn để đính kèm ảnh mặt trước thẻ BHYT học sinh:", type=["jpg", "jpeg", "png"])
 
-# Xử lý tự động đẩy file ảnh lên Storage Bucket ẩn
 img_url_cloud = ""
 if uploaded_file:
     if "uploaded_url" not in st.session_state:
@@ -91,14 +73,11 @@ if uploaded_file:
 st.write("---")
 st.markdown("#### 📁 Hồ sơ kèm theo (Phụ huynh tích chọn các giấy tờ có sẵn)")
 
-# Chia cột hiển thị danh mục checklist giống bản giấy của nhà trường
 col_doc1, col_doc2 = st.columns(2)
-
 with col_doc1:
     st.checkbox("Bản sao giấy khai sinh", key="doc_khai_sinh")
     st.checkbox("Số định danh cá nhân / Mã định danh", key="doc_dinh_danh")
     st.checkbox("Bản photo thẻ Bảo hiểm y tế", key="doc_bhyt")
-
 with col_doc2:
     st.checkbox("Giấy xác nhận diện chính sách (Lớp 1 nếu có)", key="doc_chinh_sach")
     st.checkbox("Ảnh 2x3 (1 tấm)", key="doc_anh_2x3")
@@ -107,7 +86,6 @@ st.write("---")
 st.markdown("#### ✍️ Xác nhận ký tên bằng tay cảm ứng và Nộp đơn")
 st.caption("💡 Hướng dẫn: Phụ huynh dùng ngón tay vuốt nhẹ để ký vào ô trống trắng. Sau đó bấm nút màu xanh phía dưới chữ ký để nộp đơn.")
 
-# Tạo khung đóng gói mã nguồn HTML kết hợp kịch bản xử lý gửi nhận dữ liệu ngầm không reload trang
 canvas_html = f"""
 <div style="text-align: center; font-family: Arial, sans-serif;">
     <canvas id="sig-canvas" width="440" height="170" style="border: 2px dashed #999; background-color: #ffffff; cursor: crosshair; touch-action: none !important; -webkit-touch-callout: none; -webkit-user-select: none; border-radius:4px;"></canvas>
@@ -124,7 +102,7 @@ canvas_html = f"""
     
     function getPos(c, e) {{
         var r = c.getBoundingClientRect();
-        var t = e.touches && e.touches.length > 0 ? e.touches[0] : e;
+        var t = e.touches && e.touches.length > 0 ? e.touches : e;
         return {{ x: t.clientX - r.left, y: t.clientY - r.top }};
     }}
     
@@ -143,7 +121,6 @@ canvas_html = f"""
         var msgDiv = document.getElementById("status-msg");
         var pDoc = window.parent.document;
         
-        // Quét lấy chuỗi ký tự text trực tiếp bằng thuộc tính aria-label
         var st_name = pDoc.querySelector('input[aria-label="Họ và tên học sinh (Viết hoa có dấu):"]') ? pDoc.querySelector('input[aria-label="Họ và tên học sinh (Viết hoa có dấu):"]').value.trim() : "";
         var st_gender = pDoc.querySelector('input[aria-label="Giới tính:"]') ? pDoc.querySelector('input[aria-label="Giới tính:"]').value : "Nam";
         var st_dob = pDoc.querySelector('input[aria-label="Ngày sinh (Ví dụ: 15/08/2020):"]') ? pDoc.querySelector('input[aria-label="Ngày sinh (Ví dụ: 15/08/2020):"]').value.trim() : "";
@@ -161,11 +138,10 @@ canvas_html = f"""
         var m_phone = pDoc.querySelector('input[aria-label="SĐT mẹ:"]') ? pDoc.querySelector('input[aria-label="SĐT mẹ:"]').value : "";
         var m_job = pDoc.querySelector('input[aria-label="Nghề nghiệp mẹ:"]') ? pDoc.querySelector('input[aria-label="Nghề nghiệp mẹ:"]').value : "";
 
-        // Trích xuất trạng thái đóng gói các nút tích chọn tài liệu đính kèm kèm theo
         var has_khai_sinh = pDoc.querySelector('input[aria-label="Bản sao giấy khai sinh"]') ? pDoc.querySelector('input[aria-label="Bản sao giấy khai sinh"]').checked : false;
         var has_dinh_danh = pDoc.querySelector('input[aria-label="Số định danh cá nhân / Mã định danh"]') ? pDoc.querySelector('input[aria-label="Số định danh cá nhân / Mã định danh"]').checked : false;
         var has_bhyt = pDoc.querySelector('input[aria-label="Bản photo thẻ Bảo hiểm y tế"]') ? pDoc.querySelector('input[aria-label="Bản photo thẻ Bảo hiểm y tế"]').checked : false;
-        var has_chinh_sach = pDoc.querySelector('input[aria-label="Giới xác nhận diện chính sách (Lớp 1 nếu có)"]') ? pDoc.querySelector('input[aria-label="Giới xác nhận diện chính sách (Lớp 1 nếu có)"]').checked : false;
+        var has_chinh_sach = pDoc.querySelector('input[aria-label="Giấy xác nhận diện chính sách (Lớp 1 nếu có)"]') ? pDoc.querySelector('input[aria-label="Giấy xác nhận diện chính sách (Lớp 1 nếu có)"]').checked : false;
         var has_anh_2x3 = pDoc.querySelector('input[aria-label="Ảnh 2x3 (1 tấm)"]') ? pDoc.querySelector('input[aria-label="Ảnh 2x3 (1 tấm)"]').checked : false;
         var has_anh_3x4 = pDoc.querySelector('input[aria-label="Ảnh 3x4 (1 tấm)"]') ? pDoc.querySelector('input[aria-label="Ảnh 3x4 (1 tấm)"]').checked : false;
 
