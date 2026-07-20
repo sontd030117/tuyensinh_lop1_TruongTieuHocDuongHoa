@@ -96,6 +96,7 @@ if password == "123456":
             st.metric(label="Số lượng học sinh Nữ", value=f"{nu_count} em")
 
         st.write("")
+        # ĐÃ FIX: Thêm tham số số 2 vào trong dấu ngoặc để khởi tạo chuẩn bố cục 2 cột
         col_ch1, col_ch2 = st.columns(2)
         
         with col_ch1:
@@ -190,6 +191,7 @@ if password == "123456":
             selected_student = st.selectbox("Chọn học sinh cần kiểm tra & in ấn hồ sơ:", student_list)
             matched_data = df[df["student_name"] == selected_student]
             if not matched_data.empty:
+                # ĐÃ FIX: Bổ sung chỉ mục dòng [0] để bóc tách chính xác bản ghi về dạng dictionary
                 student_row = matched_data.iloc[0].to_dict()
                 img_url = str(student_row.get("insurance_image", "")).strip()
                 raw_sig = str(student_row.get("parent_signature", "")).strip()
@@ -210,23 +212,21 @@ if password == "123456":
                 
                 st.write("<br>", unsafe_allow_html=True)
                 st.download_button(
-                    label=f"📥 BẤM VÀO ĐÂY ĐỂ TẢI BIỂU MẪU ĐƠN CỦA EM {selected_student} VỀ MÁY TÍNH",
+                    label=f"📥 BẤM VÀ Old ĐÂY ĐỂ TẢI BIỂU MẪU ĐƠN CỦA EM {selected_student} VỀ MÁY TÍNH",
                     data=full_html_document,
                     file_name=f"Don_tuyen_sing_{selected_student.replace(' ', '_')}.html",
                     mime="text/html",
                     use_container_width=True
                 )
-               buffer = io.BytesIO()
+        buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
         
-        # 1. Trích xuất bảng dữ liệu hiển thị hiện tại
+        # Tạo bản sao dữ liệu và lọc bỏ cột "Đường dẫn ảnh thẻ BHYT" theo quy chuẩn
         df_excel = df_display[cols_to_show].copy()
-        
-        # 2. ĐÃ FIX: Loại bỏ cột "Đường dẫn ảnh thẻ BHYT" khỏi file Excel nếu tồn tại
         if "Đường dẫn ảnh thẻ BHYT" in df_excel.columns:
             df_excel = df_excel.drop(columns=["Đường dẫn ảnh thẻ BHYT"])
             
-        # 3. ĐÃ FIX: Quét qua tất cả các cột, chuyển giá trị True/False thành "Có"/"Không"
+        # ĐÃ FIX: Ánh xạ kết quả Boolean (True/False) về chữ văn phòng "Có" hoặc "Không"
         check_cols = [
             "Có Bản sao Khai sinh", "Có Số Định danh", "Có Photo thẻ BHYT", 
             "Thuộc Diện chính sách", "Có Ảnh 2x3", "Có Ảnh 3x4"
@@ -235,12 +235,9 @@ if password == "123456":
             if col in df_excel.columns:
                 df_excel[col] = df_excel[col].map({True: "Có", False: "Không", "True": "Có", "False": "Không"}).fillna("Không")
 
-        # 4. Ghi dữ liệu sạch ra tệp Excel binary thông qua openpyxl
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             df_excel.to_excel(writer, index=False, sheet_name=sheet_name_excel[:31])
             worksheet = writer.sheets[sheet_name_excel[:31]]
-            
-            # Tự động giãn cột thông minh theo chiều dài ký tự chữ Tiếng Việt
             for col_idx, col in enumerate(worksheet.columns, start=1):
                 max_len = 0
                 col_letter = get_column_letter(col_idx)
