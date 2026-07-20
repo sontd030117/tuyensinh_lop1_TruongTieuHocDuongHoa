@@ -216,12 +216,31 @@ if password == "123456":
                     mime="text/html",
                     use_container_width=True
                 )
-        buffer = io.BytesIO()
+               buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
+        
+        # 1. Trích xuất bảng dữ liệu hiển thị hiện tại
+        df_excel = df_display[cols_to_show].copy()
+        
+        # 2. ĐÃ FIX: Loại bỏ cột "Đường dẫn ảnh thẻ BHYT" khỏi file Excel nếu tồn tại
+        if "Đường dẫn ảnh thẻ BHYT" in df_excel.columns:
+            df_excel = df_excel.drop(columns=["Đường dẫn ảnh thẻ BHYT"])
+            
+        # 3. ĐÃ FIX: Quét qua tất cả các cột, chuyển giá trị True/False thành "Có"/"Không"
+        check_cols = [
+            "Có Bản sao Khai sinh", "Có Số Định danh", "Có Photo thẻ BHYT", 
+            "Thuộc Diện chính sách", "Có Ảnh 2x3", "Có Ảnh 3x4"
+        ]
+        for col in check_cols:
+            if col in df_excel.columns:
+                df_excel[col] = df_excel[col].map({True: "Có", False: "Không", "True": "Có", "False": "Không"}).fillna("Không")
+
+        # 4. Ghi dữ liệu sạch ra tệp Excel binary thông qua openpyxl
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df_excel = df_display[cols_to_show]
             df_excel.to_excel(writer, index=False, sheet_name=sheet_name_excel[:31])
             worksheet = writer.sheets[sheet_name_excel[:31]]
+            
+            # Tự động giãn cột thông minh theo chiều dài ký tự chữ Tiếng Việt
             for col_idx, col in enumerate(worksheet.columns, start=1):
                 max_len = 0
                 col_letter = get_column_letter(col_idx)
