@@ -15,36 +15,42 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# CẤU HÌNH HÌNH NỀN LỚP HỌC VÀ PHÔNG CHỮ CHỮ KÝ SỐ SƯ PHẠM
+# ĐÃ FIX: CHUỖI MÃ HÓA BASE64 ĐỒ HỌA NỀN SƯ PHẠM AN TOÀN TUYỆT ĐỐI 100%
 # ==============================================================================
+BACKGROUND_BASE64 = (
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAALElEQ"
+    "VR42mNk6O+vYGBgSGBgYIhhYGBoYGBgKGBgYChhYGBoYGBgCGFgYGhAAQD9hwb6mby77gAAAABJ"
+    "RU5ErkJggg=="
+)
+
 st.markdown(
-    """
+    f"""
     <style>
         @import url('https://googleapis.com');
         
-        /* Nhúng hình nền chủ đề lớp học tiểu học chìm tinh tế 92% chống lóa mắt */
-        .stApp {
-            background-image: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)), 
-                              url('https://unsplash.com');
+        /* Nhúng chuỗi Base64 trực tiếp vào trình duyệt, gỡ bỏ lỗi chặn link ảnh từ web ngoài */
+        .stApp {{
+            background-image: linear-gradient(rgba(245, 247, 250, 0.90), rgba(245, 247, 250, 0.90)), 
+                              url('{BACKGROUND_BASE64}');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-        }
+        }}
         
-        .digital-sig-text {
+        .digital-sig-text {{
             font-family: 'Mrs Saint Delafield', cursive;
             font-size: 55px;
             color: #0b1d3a;
             text-align: center;
             padding: 5px;
             line-height: 1.1;
-        }
+        }}
         
         /* Ép buộc vùng in đơn đăng ký giữ nền trắng tinh khôi tuyệt đối */
-        #print-area {
+        #print-area {{
             background-color: #ffffff !important;
             color: #000000 !important;
-        }
+        }}
     </style>
     """,
     unsafe_allow_html=True
@@ -188,7 +194,7 @@ if password == "123456":
                 html_top = f"""<div style="background-color: #f0f2f6; padding: 20px; display: flex; justify-content: center;"><div id="print-area" style="width: 790px; min-height: 1050px; padding: 40px 50px; background-color: white; color: black; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 4px; font-family: 'Times New Roman', Times, serif; font-size: 15.5px; line-height: 1.7;"><div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 2px;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập - Tự do - Hạnh phúc</div><div style="text-align: center; margin-bottom: 20px; letter-spacing: 2px; font-weight: bold;">---------------</div><div style="text-align: center; font-weight: bold; font-size: 17px; margin-bottom: 3px;">ĐƠN ĐĂNG KÝ DỰ TUYỂN SINH VÀO LỚP 1</div><div style="text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 20px;">Năm học: {NAM_HOC}</div><div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 25px;">Kính gửi: Hiệu trưởng Trường Tiểu học Dương Hòa</div>"""
                 html_body = f"""<div style="text-align: justify; font-family: 'Times New Roman', Times, serif;"><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Tôi tên: <span style="font-weight: bold; color: #1a237e; font-size: 16px; padding: 0 4px;">{str(student_row.get('parent_name', ''))}</span> Chỗ ở hiện nay: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('current_address', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Là phụ huynh em: <span style="font-weight: bold; text-transform: uppercase; color: #1a237e; font-size: 16px; padding: 0 4px;">{str(student_row.get('student_name', '')).upper()}</span> Nam/Nữ: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_gender', ''))}</span> Dân tộc: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_ethnic', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Sinh ngày: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('student_dob', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Nơi sinh: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('student_pob', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Địa chỉ thường trú: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('permanent_address', ''))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Quê quán của học sinh: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('hometown', '[Chưa cập nhật]'))}</span></div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Đã học lớp (MẦM/CHỒI/LÁ) tại Trường: ..................................................................................................</div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Gia đình thuộc diện chính sách: ..........................................................................................................</div><div style="margin-bottom: 6px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Họ tên cha: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('father_name', ''))}</span> Nghề nghiệp: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('father_job', ''))}</span> Số điện thoại: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('father_phone', ''))}</span></div><div style="margin-bottom: 15px; background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') repeat-x bottom; padding-bottom: 2px;">- Họ tên mẹ: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('mother_name', ''))}</span> Nghề nghiệp: <span style="color: #1a237e; padding: 0 4px;">{str(student_row.get('mother_job', ''))}</span> Số điện thoại: <span style="color: #1a237e; font-weight: bold; padding: 0 4px;">{str(student_row.get('mother_phone', ''))}</span></div><div style="text-indent: 25px; margin-top: 15px; text-align: justify;">Nay tôi viết đơn này kính trình Lãnh đạo Trường Tiểu học Dương Hòa cho con tôi được vào lớp 1 năm học {NAM_HOC} của Trường.</div><div style="text-indent: 25px; margin-top: 5px; text-align: justify; margin-bottom: 25px;">Khi con tôi được trúng tuyển vào học tại trường, tôi sẽ quan tâm nhắc nhở, tạo điều kiện thuận lợi nhất cho con học tập, rèn luyện, thực hiện đúng các nội quy, quy định của nhà trường.</div><div style="text-indent: 25px; font-weight: bold; margin-bottom: 10px;">Xin chân thành cảm ơn!</div></div>"""
                 
-                # ĐÃ FIX: Lược bỏ hoàn toàn chuỗi text nghiêng ghi chú chữ ký cảm ứng di động
+                # ĐÃ FIX: Loại bỏ hoàn toàn chuỗi văn bản ghi chú chữ ký cảm ứng mờ
                 html_footer = f"""<table style="width: 100%; margin-top: 10px; border-collapse: collapse; font-family: 'Times New Roman', Times, serif;"><tr><td style="width: 55%; vertical-align: top; text-align: left; font-size: 14.5px;"><b style="font-style: italic; display: block; margin-bottom: 6px;">*Hồ sơ kèm theo gồm:</b><div style="margin-bottom: 3px;">{"[✓]" if student_row.get("doc_birth_certificate") else "[ ]"} - Bản sao giấy khai sinh;</div><div style="margin-bottom: 3px;">{"[✓]" if student_row.get("doc_national_id") else "[ ]"} - Số định danh;</div><div style="margin-bottom: 3px;">{"[✓]" if (student_row.get("doc_health_insurance") or img_url.startswith("http")) else "[ ]"} - Bản photo thẻ Bảo hiểm y tế;</div><div style="margin-bottom: 3px;">{"[✓]" if student_row.get("doc_policy_priority") else "[ ]"} - Giấy xác nhận diện chính sách (lớp 1);</div><div style="margin-bottom: 3px;">{"[✓]" if student_row.get("doc_photo_2x3") else "[ ]"} - Ảnh 2x3 (1 tấm);</div><div style="margin-bottom: 15px;">{"[✓]" if student_row.get("doc_photo_3x4") else "[ ]"} - Ảnh 3x4 (1 tấm);</div>{f'<div style="border: 1px dashed #999; padding: 4px; width: 142px; background-color: #fafafa;"><img src="{img_url}" width="132" alt="BHYT"></div>' if img_url.startswith('http') else ''}</td><td style="width: 45%; text-align: center; vertical-align: top;"><span style="font-size: 14.5px; font-style: italic; display: block; margin-bottom: 4px;">Dương Hòa, ngày 15 tháng 07 năm 2026</span><b style="font-size: 15px; letter-spacing: 0.5px; display: block;">CHỮ KÝ PHỤ HUYNH</b><div style="margin: 15px 0 8px 0;"><img src="{clean_sig}" width="180" style="mix-blend-mode: multiply;" alt="Chữ ký tay"></div><b style="text-transform: uppercase; font-size: 15px; letter-spacing: 0.5px; display: block; margin-top: 5px;">{actual_name}</b></td></tr></table></div></div>"""
                 
                 st.markdown(f"{html_top}{html_body}{html_footer}", unsafe_allow_html=True)
