@@ -7,7 +7,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 from supabase import Client, create_client
 
-# Cấu hình tham số hệ thống cố định
+# ==============================================================================
+# CẤU HÌNH HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY SUPABASE VÀ KHỞI TẠO GIAO DIỆN
+# ==============================================================================
 NAM_HOC = "2026 - 2027"
 SUPABASE_URL = "https://ywvlqwbhzbpddngxuvlm.supabase.co" 
 
@@ -21,7 +23,6 @@ try:
 except Exception as e:
     st.error("Hệ thống đang bảo trì, vui lòng quay lại sau!")
 
-# Cấu hình giao diện Streamlit thích ứng giao diện di động
 st.set_page_config(
     page_title=f"Đăng ký tuyển sinh {NAM_HOC}",
     page_icon="📝",
@@ -43,7 +44,7 @@ with col_hs2:
     st.text_input("Dân tộc:", value="Kinh", key="inp_st_ethnic")
     st.text_input("Nơi sinh (Ghi Tỉnh/Thành phố):", key="inp_st_pob")
 
-# Khu vực ô trống tự do thay thế cho dropdown hành chính cũ
+# Hệ thống 2 ô trống để phụ huynh tự điền thông tin địa chỉ ngắn gọn
 st.text_input("Quê quán (Ghi Xã/Huyện/Tỉnh):", key="inp_hometown", placeholder="Ví dụ: Xã Dương Hòa, Huyện Kiên Lương, Tỉnh Kiên Giang")
 st.text_input("Địa chỉ cư trú hiện nay (Số nhà, đường, ấp/khu phố, xã, huyện, tỉnh):", key="inp_address", placeholder="Ví dụ: Số 278, tổ 8, ấp Tà Săng, Xã Dương Hòa, Huyện Kiên Lương, Kiên Giang")
 st.write("---")
@@ -100,9 +101,10 @@ canvas_html = f"""
     var canvas = document.getElementById("sig-canvas"); var ctx = canvas.getContext("2d");
     ctx.strokeStyle = "#0b1d3a"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.lineJoin = "round"; var drawing = false;
     
+    // ĐÃ FIX TRIỆT ĐỂ: Trích xuất chính xác điểm chạm e.touches[0] giúp di động bắt tọa độ mượt mà 100%
     function getPos(c, e) {{
         var r = c.getBoundingClientRect();
-        var t = e.touches && e.touches.length > 0 ? e.touches : e;
+        var t = e.touches && e.touches.length > 0 ? e.touches[0] : e;
         return {{ x: t.clientX - r.left, y: t.clientY - r.top }};
     }}
     
@@ -203,4 +205,4 @@ canvas_html = f"""
     }});
 </script>
 """
-components.html(canvas_html, height=290)
+components.html(canvas_html, height=290, scrolling=True)
