@@ -96,7 +96,6 @@ if password == "123456":
             st.metric(label="Số lượng học sinh Nữ", value=f"{nu_count} em")
 
         st.write("")
-        # ĐÃ FIX: Thêm tham số số 2 vào trong dấu ngoặc để khởi tạo chuẩn bố cục 2 cột
         col_ch1, col_ch2 = st.columns(2)
         
         with col_ch1:
@@ -191,7 +190,6 @@ if password == "123456":
             selected_student = st.selectbox("Chọn học sinh cần kiểm tra & in ấn hồ sơ:", student_list)
             matched_data = df[df["student_name"] == selected_student]
             if not matched_data.empty:
-                # ĐÃ FIX: Bổ sung chỉ mục dòng [0] để bóc tách chính xác bản ghi về dạng dictionary
                 student_row = matched_data.iloc[0].to_dict()
                 img_url = str(student_row.get("insurance_image", "")).strip()
                 raw_sig = str(student_row.get("parent_signature", "")).strip()
@@ -212,7 +210,7 @@ if password == "123456":
                 
                 st.write("<br>", unsafe_allow_html=True)
                 st.download_button(
-                    label=f"📥 BẤM VÀ Old ĐÂY ĐỂ TẢI BIỂU MẪU ĐƠN CỦA EM {selected_student} VỀ MÁY TÍNH",
+                    label=f"📥 BẤM VÀO ĐÂY ĐỂ TẢI BIỂU MẪU ĐƠN CỦA EM {selected_student} VỀ MÁY TÍNH",
                     data=full_html_document,
                     file_name=f"Don_tuyen_sing_{selected_student.replace(' ', '_')}.html",
                     mime="text/html",
@@ -221,12 +219,10 @@ if password == "123456":
         buffer = io.BytesIO()
         sheet_name_excel = f"TuyenSinhLop1_{NAM_HOC.replace(' ', '')}"
         
-        # Tạo bản sao dữ liệu và lọc bỏ cột "Đường dẫn ảnh thẻ BHYT" theo quy chuẩn
         df_excel = df_display[cols_to_show].copy()
         if "Đường dẫn ảnh thẻ BHYT" in df_excel.columns:
             df_excel = df_excel.drop(columns=["Đường dẫn ảnh thẻ BHYT"])
             
-        # ĐÃ FIX: Ánh xạ kết quả Boolean (True/False) về chữ văn phòng "Có" hoặc "Không"
         check_cols = [
             "Có Bản sao Khai sinh", "Có Số Định danh", "Có Photo thẻ BHYT", 
             "Thuộc Diện chính sách", "Có Ảnh 2x3", "Có Ảnh 3x4"
@@ -235,16 +231,48 @@ if password == "123456":
             if col in df_excel.columns:
                 df_excel[col] = df_excel[col].map({True: "Có", False: "Không", "True": "Có", "False": "Không"}).fillna("Không")
 
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             df_excel.to_excel(writer, index=False, sheet_name=sheet_name_excel[:31])
             worksheet = writer.sheets[sheet_name_excel[:31]]
+            
+            thin_border = Border(
+                left=Side(style='thin', color='BFBFBF'), right=Side(style='thin', color='BFBFBF'),
+                top=Side(style='thin', color='BFBFBF'), bottom=Side(style='thin', color='BFBFBF')
+            )
+            header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
+            header_font = Font(name='Times New Roman', size=11, bold=True, color='FFFFFF')
+            header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            body_font = Font(name='Times New Roman', size=11)
+            body_alignment = Alignment(horizontal='left', vertical='center')
+            center_alignment = Alignment(horizontal='center', vertical='center')
+            
+            worksheet.row_dimensions[1].height = 28
+            for cell in worksheet[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = header_alignment
+                cell.border = thin_border
+            
+            for row_idx in range(2, worksheet.max_row + 1):
+                worksheet.row_dimensions[row_idx].height = 20
+                for col_idx in range(1, worksheet.max_column + 1):
+                    cell = worksheet.cell(row=row_idx, column=col_idx)
+                    cell.font = body_font
+                    cell.border = thin_border
+                    col_name = worksheet.cell(row=1, column=col_idx).value
+                    if col_name in check_cols or col_name == "Giới tính" or col_name == "Ngày sinh":
+                        cell.alignment = center_alignment
+                    else:
+                        cell.alignment = body_alignment
+            
             for col_idx, col in enumerate(worksheet.columns, start=1):
                 max_len = 0
                 col_letter = get_column_letter(col_idx)
                 for cell in col:
                     if cell.value:
                         max_len = max(max_len, len(str(cell.value)))
-                worksheet.column_dimensions[col_letter].width = max(max_len + 4, 12)
+                worksheet.column_dimensions[col_letter].width = max(max_len + 4, 13)
 
         st.write("<br><br>", unsafe_allow_html=True)
         st.markdown("### 💾 Tải xuống dữ liệu báo cáo tổng hợp")
